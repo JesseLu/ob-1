@@ -1,5 +1,5 @@
 import petsc4py
-petsc4py.init('-ksp_monitor')
+petsc4py.init('-ksp_type preonly -pc_type lu -ksp_monitor')
 from petsc4py import PETSc
 import numpy as np
 
@@ -8,7 +8,7 @@ class simulate:
 
     """
 
-    def __init__(self, dims, omega, d_pml=5):
+    def __init__(self, dims, omega, d_pml=10):
         """ Create the matrices that we will use to simulate different 
             dielectric structures.
 
@@ -25,12 +25,19 @@ class simulate:
 
         pos = np.arange(dims[0])
 
-        stretch_coords(d_pml, dims[0]-0.5, pos, 1/omega)
+        sc_x = lambda x, y: \
+                stretch_coords(d_pml, dims[0]-0.5, x, 1/omega)
+        sc_y = lambda x, y: \
+                stretch_coords(d_pml, dims[1]-0.5, y, 1/omega)
 
-        self.Dx_H = difference_matrix(self.da, (1, 0))
-        self.Dy_H = difference_matrix(self.da, (0, 1))
-        self.Dx_E = difference_matrix(self.da, (-1, 0))
-        self.Dy_E = difference_matrix(self.da, (0, -1))
+        self.Dx_H = difference_matrix(self.da, (1, 0), 
+                                        sc=lambda x, y: sc_x(x+0.5, y))
+        self.Dy_H = difference_matrix(self.da, (0, 1),
+                                        sc=lambda x, y: sc_y(x, y+0.5))
+        self.Dx_E = difference_matrix(self.da, (-1, 0),
+                                        sc=lambda x, y: sc_x(x, y))
+        self.Dy_E = difference_matrix(self.da, (0, -1),
+                                        sc=lambda x, y: sc_y(x, y))
 
         # print self.Dx_H.getValues(range(9), range(9))
             
@@ -43,12 +50,14 @@ class simulate:
         self.ksp = PETSc.KSP().create()
         self.ksp.setOperators(A)
 
-    def solve(self, type, max_iters=1000):
+    def solve(self, max_iters=1000):
         self.ksp.setFromOptions()
-        self.ksp.setType(type)
+#         self.ksp.setType('preonly')
+#         print self.ksp.getPC()
+#         self.ksp.setPC('lu')
         self.ksp.setTolerances(max_it=max_iters)
+        print self.ksp.getType()
         # self.ksp.setMonitor(self.ksp.getMonitor())
-        print self.ksp.getMonitor()
         self.ksp.solve(self.b, self.x)
 
 
@@ -56,6 +65,9 @@ def difference_matrix(da, shift, coeff=1.0, sc=None):
     """ Create a difference matrix.
 
     """
+
+    if sc is None:
+        sc = lambda x, y: (1.0)
 
     D = da.getMatrix() # Create the difference matrix.
 
@@ -68,10 +80,10 @@ def difference_matrix(da, shift, coeff=1.0, sc=None):
             row.index = (i, j)
 
             col.index = (i, j)
-            D.setValueStencil(row, col, +1 * coeff)
+            D.setValueStencil(row, col, +1.0 * coeff * sc(i, j))
 
             col.index = (i + shift[0], j + shift[1])
-            D.setValueStencil(row, col, -1 * coeff)
+            D.setValueStencil(row, col, -1.0 * coeff * sc(i, j))
 
     D.assemblyBegin()
     D.assemblyEnd()
@@ -84,12 +96,19 @@ def stretch_coords(d_pml, max_pos, pos, sigma, m=2.5):
 
     """
 
-    sc = (1 + 0j) * np.ones(pos.shape)
-    for k in range(pos.size):
-        if pos[k] < d_pml:
-            sc[k] = (1 + 1j * ((d_pml - pos[k]) / d_pml)**m)**-1
-        elif max_pos - pos[k] < d_pml:
-            sc[k] = (1 + 1j * ((d_pml - (max_pos - pos[k])) / d_pml)**m)**-1
+    if pos < d_pml:
+        return (1 + 1j * ((d_pml - pos) / d_pml)**m)**-1
+    elif max_pos - pos < d_pml:
+        return (1 + 1j * ((d_pml - (max_pos - pos)) / d_pml)**m)**-1
+    else:
+        return 1
 
-    sc = (1 + 0j) * np.ones(pos.shape)
-    return sc
+#     sc = (1 + 0j) * np.ones(pos.shape)
+#     for k in range(pos.size):
+#         if pos[k] < d_pml:
+#             sc[k] = (1 + 1j * ((d_pml - pos[k]) / d_pml)**m)**-1
+#         elif max_pos - pos[k] < d_pml:
+#             sc[k] = (1 + 1j * ((d_pml - (max_pos - pos[k])) / d_pml)**m)**-1
+# 
+#     sc = (1 + 0j) * np.ones(pos.shape)
+#     return sc

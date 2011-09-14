@@ -64,7 +64,8 @@ electromagnetics.
 Issues currently being worked on
 --------------------------------
 
-1.  Produce the simulation package!
+1.  Change plotting to gnuplot.
+1.  Document with Sphinx.
 
 
 Dependencies
