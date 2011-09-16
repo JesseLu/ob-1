@@ -3,7 +3,7 @@ petsc4py.init('-ksp_type preonly -pc_type lu -ksp_monitor')
 from petsc4py import PETSc
 import numpy as np
 
-class simulate:
+class FieldSolve:
     """ Used to solve Maxwell's equations in two-dimensions (TE mode).
 
     """

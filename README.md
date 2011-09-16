@@ -71,5 +71,7 @@ Issues currently being worked on
 Dependencies
 ============
 
-This package uses petsc4py and the packages which subsequentlyit depends on.
-Use of mpi4py and the CUDA environment is anticipated in the near future.
+This package uses petsc4py and the packages which it subsequently depends on.
+Also, the numpy and scipy packages are required.
+The Sphinx (python package) is used to generate documentation.
+Use of mpi4py and the CUDA environment is anticipated in the near future. 
