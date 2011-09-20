@@ -8,27 +8,27 @@ class FieldSolve:
 
     """
 
-    def __init__(self, dims, omega, d_pml=10):
+    def __init__(self, epsilon, omega, d_pml=10):
         """ Create the matrices that we will use to simulate different 
             dielectric structures.
 
         """
 
-        self.da = PETSc.DA().create(dims,
+        self.da = PETSc.DA().create(epsilon.shape,
                                     stencil_width=1,
                                     boundary_type=('periodic', 'periodic'))
 
         self.omega = omega
-        self.dims = dims
+        self.shape = epsilon.shape
+        self.epsilon = epsilon
         self.b = self.da.createGlobalVec()
         self.x = self.da.createGlobalVec()
 
-        pos = np.arange(dims[0])
 
         sc_x = lambda x, y: \
-                stretch_coords(d_pml, dims[0]-0.5, x, 1/omega)
+                stretch_coords(d_pml, self.shape[0]-0.5, x, 1/omega)
         sc_y = lambda x, y: \
-                stretch_coords(d_pml, dims[1]-0.5, y, 1/omega)
+                stretch_coords(d_pml, self.shape[1]-0.5, y, 1/omega)
 
         self.Dx_H = difference_matrix(self.da, (1, 0), 
                                         sc=lambda x, y: sc_x(x+0.5, y))
@@ -42,8 +42,18 @@ class FieldSolve:
         # print self.Dx_H.getValues(range(9), range(9))
             
     def insert_structure(self):
+
+        eps = self.da.createGlobalVec()
+        eps_val = self.da.getVecArray(eps)
+        eps_val[:] = 1./self.epsilon[:]
+
+        ex = self.da.createGlobalVec()
+        ey = self.da.createGlobalVec()
+
         A = self.da.getMatrix() 
+        self.Dx_H.diagonalScale(eps)
         A = self.Dx_E.matMult(self.Dx_H)
+        self.Dy_H.diagonalScale(eps)
         A.axpy(1.0, self.Dy_E.matMult(self.Dy_H))
         A.shift(-self.omega**2)
 

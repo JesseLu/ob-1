@@ -64,8 +64,8 @@ electromagnetics.
 Issues currently being worked on
 --------------------------------
 
+1.  Re-organize simulation file so that insertion of epsilon is sane.
 1.  Add capability to insert waveguide mode into simulation.
-1.  Re-organize simulation file.
 1.  Document with Sphinx.
 
 
