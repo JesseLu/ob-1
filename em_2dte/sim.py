@@ -60,6 +60,9 @@ class FieldSolve:
         # self.ksp.setMonitor(self.ksp.getMonitor())
         self.ksp.solve(self.b, self.x)
 
+    def plot(self, gplot):
+        gplot.plot(np.real(self.da.getVecArray(self.x)[:]))
+
 
 def difference_matrix(da, shift, coeff=1.0, sc=None):
     """ Create a difference matrix.

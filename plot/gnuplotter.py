@@ -17,7 +17,18 @@ class Plotter:
 
 
     def plot(self, data):
-        self.g.plot(data)
+        """ Plot data. Input parameter data should be a numpy array of either
+            one or two dimensions.
+
+        """
+
+        if data.ndim == 1:
+            self.g.plot(data)
+        elif data.ndim == 2:
+            self.g.plot(Gnuplot.GridData(data, range(data.shape[0]), 
+                    range(data.shape[1]), binary=0, with_='image'))
+        else:
+            raise Exception("Data must be a 1 or 2-dimensional array,")
 
         
 
