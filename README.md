@@ -64,7 +64,8 @@ electromagnetics.
 Issues currently being worked on
 --------------------------------
 
-1.  Change plotting to gnuplot.
+1.  Add capability to insert waveguide mode into simulation.
+1.  Re-organize simulation file.
 1.  Document with Sphinx.
 
 
