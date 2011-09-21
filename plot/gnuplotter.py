@@ -30,6 +30,8 @@ class Plotter:
         else:
             raise Exception("Data must be a 1 or 2-dimensional array,")
 
+    def save(self, filename):
+        self.g.hardcopy(filename, enhanced=1, color=1)
         
 
 
