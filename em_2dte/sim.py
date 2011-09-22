@@ -37,7 +37,7 @@ class FieldSolve:
         gplot.plot(np.real(self.field))
         gplot.plot(np.abs(self.field))
 
-def solve(omega, epsilon, mode_pos=20, mode_order=1, d_pml=10):
+def solve(omega, epsilon, mode_pos=20, mode_order=1, d_pml=10.):
 
     # Create the distributed array that all vectors and matrices will be 
     # based off of.
@@ -53,7 +53,7 @@ def solve(omega, epsilon, mode_pos=20, mode_order=1, d_pml=10):
     b = da.createGlobalVec()
     b_val = da.getVecArray(b) # Obtain access to elements of b.
     b_val[mode_pos, :] = mode.field[:] # Define location of point source.
-#     b_val[mode_pos+1, :] = mode.field[:] * np.exp(1j * np.pi) # Define location of point source.
+    # b_val[mode_pos-1, :] = -mode.field[:] * np.exp(1j * mode.beta) # Define location of point source.
 #     b_val[mode_pos+1, :] = mode.field[:] * np.exp(1j * 2 * np.pi / 9) # Define location of point source.
     print mode.beta, 2*np.pi /mode.beta # Define location of point source.
 
@@ -75,19 +75,24 @@ def solve(omega, epsilon, mode_pos=20, mode_order=1, d_pml=10):
 
 def setup_matrix(da, epsilon, omega, d_pml):
     m = np.sqrt(np.max(epsilon.flatten()))
+    print m, 'm'
 
     sc_x = lambda x, y: \
             stretch_coords(d_pml, epsilon.shape[0]-0.5, x, 1/(omega * m))
     sc_y = lambda x, y: \
             stretch_coords(d_pml, epsilon.shape[1]-0.5, y, 1/(omega * m))
 
+#     for i in np.arange(epsilon.shape[0], dtype=np.float64):
+#         print sc_x(i,0),
+#     return
+
     # H-fields need to "reach" back since that's where corresponding E-fields
     # are located.
-    Dx_H = diff_mat(da, (-1, 0), stretch_coords=lambda x, y: sc_x(x+0.5, y))
-    Dy_H = diff_mat(da, (0, -1), stretch_coords=lambda x, y: sc_y(x, y+0.5))
+    Dx_H = diff_mat(da, (-1, 0), stretch_coords=lambda x, y: sc_x(x, y))
+    Dy_H = diff_mat(da, (0, -1), stretch_coords=lambda x, y: sc_y(x, y))
 
-    Dx_E = diff_mat(da, (1, 0), stretch_coords=lambda x, y: sc_x(x, y))
-    Dy_E = diff_mat(da, (0, 1), stretch_coords=lambda x, y: sc_y(x, y))
+    Dx_E = diff_mat(da, (1, 0), stretch_coords=lambda x, y: sc_x(x+0.5, y))
+    Dy_E = diff_mat(da, (0, 1), stretch_coords=lambda x, y: sc_y(x, y+0.5))
 
     ex, ey = interp_epsilon(da, epsilon)
 
@@ -116,8 +121,8 @@ def diff_mat(da, shift, coeff=1.0, stretch_coords=None):
     col = PETSc.Mat.Stencil() # Defines column location of grid element.
 
     (i0, i1), (j0, j1) = da.getRanges()
-    for i in range(i0, i1):
-        for j in range(j0, j1):
+    for i in np.arange(i0, i1, dtype=np.float64):
+        for j in np.arange(j0, j1, dtype=np.float64):
             row.index = (i, j)
 
             col.index = (i, j)
@@ -138,9 +143,9 @@ def stretch_coords(d_pml, max_pos, pos, sigma, m=2.5):
     """
 
     if pos < d_pml:
-        return (1 + 1j * sigma * ((d_pml - pos) / d_pml)**m)**1
+        return (1 + 1j * sigma * ((d_pml - pos) / d_pml)**m)
     elif max_pos - pos < d_pml:
-        return (1 + 1j * sigma * ((d_pml - (max_pos - pos)) / d_pml)**m)**1
+        return (1 + 1j * sigma * ((d_pml - (max_pos - pos)) / d_pml)**m)
     else:
         return 1
 
