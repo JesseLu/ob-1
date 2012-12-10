@@ -1,0 +1,175 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>test_prodQ</title><meta name="generator" content="MATLAB 7.13"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2012-12-10"><meta name="DC.source" content="test_prodQ.m"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head><body><div class="content"><h1>test_prodQ</h1><!--introduction--><p>Test function for <tt>prodQ_local</tt> and <tt>prodQ_global</tt>.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Description</a></li><li><a href="#3">Source code</a></li><li><a href="#4">Private function to create a test problem</a></li><li><a href="#7">Private function to create a test case</a></li></ul></div><h2>Description<a name="1"></a></h2><pre class="codeinput"><span class="keyword">function</span> [opt_prob] = test_prodQ()
+</pre><h2>Source code<a name="3"></a></h2><pre class="codeinput">    opt_prob = my_create_test_problem(2, 10, 3);
+</pre><h2>Private function to create a test problem<a name="4"></a></h2><pre class="codeinput"><span class="keyword">function</span> [opt_prob] = my_create_test_problem(num_modes, n, p)
+</pre><pre class="codeinput">    <span class="keyword">for</span> k = 1 : num_modes
+        [fo, pr, sa, sd] = my_create_test_case(n, p);
+        opt_prob(k) = struct(   <span class="string">'field_obj'</span>, fo, <span class="keyword">...</span>
+                                <span class="string">'phys_res'</span>, pr, <span class="keyword">...</span>
+                                <span class="string">'solve_A'</span>, sa, <span class="keyword">...</span>
+                                <span class="string">'solve_A_dagger'</span>, sd);
+    <span class="keyword">end</span>
+</pre><h2>Private function to create a test case<a name="7"></a></h2><p>A field design objective corresponding to</p><p><img src="test_prodQ_eq04213.png" alt="$$ \alpha \le | C^\dagger x | \le \beta $$"></p><p>is created, as well as a physics residual of the form</p><p><img src="test_prodQ_eq23850.png" alt="$$ A_0 x - \mbox{diag}(z) x - b_0 = 0 $$"></p><p>where</p><div><ul><li><img src="test_prodQ_eq30993.png" alt="$A(z) = A_0 - \mbox{diag}(z)$">,</li><li><img src="test_prodQ_eq81320.png" alt="$b(z) = b$">,</li><li><img src="test_prodQ_eq65817.png" alt="$B(x) = -\mbox{diag}(x)$">, and</li><li><img src="test_prodQ_eq29887.png" alt="$d(x) = A_0 x - b_0$">.</li></ul></div><p>Finally, function handles for solving A and its conjugate transpose are also created.</p><pre class="codeinput"><span class="keyword">function</span> [field_obj, phys_res, solve_A, solve_A_dagger] = <span class="keyword">...</span>
+            my_create_test_case(n, p)
+
+    <span class="comment">% Create the field objective.</span>
+    alpha = abs(randn(p, 1));
+    field_obj = struct( <span class="string">'alpha'</span>, alpha, <span class="keyword">...</span>
+                        <span class="string">'beta'</span>,  alpha + abs(randn(p, 1)), <span class="keyword">...</span>
+                        <span class="string">'C'</span>, randn(n, p) + 1i * randn(n, p));
+
+    <span class="comment">% Create the physics residual.</span>
+    A0 = randn(n) + 1i * randn(n);
+    b0 = randn(n, 1) + 1i * randn(n, 1);
+
+    phys_res = struct(  <span class="string">'A'</span>, @(z) A0 - diag(z), <span class="keyword">...</span>
+                        <span class="string">'b'</span>, @(z) b0, <span class="keyword">...</span>
+                        <span class="string">'B'</span>, @(x) -diag(x), <span class="keyword">...</span>
+                        <span class="string">'d'</span>, @(x) A0 * x - b0);
+
+   <span class="comment">% Function handles for solving A.</span>
+   solve_A = @(z, b) (@() phys_res.A(z) \ b);
+   solve_A_dagger = @(z, b) (@() phys_res.A(z)' \ b);
+</pre><pre class="codeoutput">
+ans = 
+
+1x2 struct array with fields:
+    field_obj
+    phys_res
+    solve_A
+    solve_A_dagger
+
+</pre><p class="footer"><br>
+      Published with MATLAB&reg; 7.13<br></p></div><!--
+##### SOURCE BEGIN #####
+%% test_prodQ
+% Test function for |prodQ_local| and |prodQ_global|.
+
+%% Description
+%
+
+function [opt_prob] = test_prodQ()
+
+%% Source code
+
+    opt_prob = my_create_test_problem(2, 10, 3);
+
+
+%% Private function to create a test problem
+function [opt_prob] = my_create_test_problem(num_modes, n, p)
+    for k = 1 : num_modes
+        [fo, pr, sa, sd] = my_create_test_case(n, p);
+        opt_prob(k) = struct(   'field_obj', fo, ...
+                                'phys_res', pr, ...
+                                'solve_A', sa, ...
+                                'solve_A_dagger', sd);
+    end
+
+%% Private function to create a test case
+%
+% A field design objective corresponding to
+%
+% $$ \alpha \le | C^\dagger x | \le \beta $$
+%
+% is created, as well as a physics residual of the form
+%
+% $$ A_0 x - \mbox{diag}(z) x - b_0 = 0 $$
+%
+% where 
+%
+% * $A(z) = A_0 - \mbox{diag}(z)$,
+% * $b(z) = b$,
+% * $B(x) = -\mbox{diag}(x)$, and
+% * $d(x) = A_0 x - b_0$.
+%
+% Finally, function handles for solving A and its conjugate transpose are 
+% also created.
+%
+function [field_obj, phys_res, solve_A, solve_A_dagger] = ...
+            my_create_test_case(n, p)
+
+    % Create the field objective.
+    alpha = abs(randn(p, 1));
+    field_obj = struct( 'alpha', alpha, ...
+                        'beta',  alpha + abs(randn(p, 1)), ...
+                        'C', randn(n, p) + 1i * randn(n, p));
+
+    % Create the physics residual.
+    A0 = randn(n) + 1i * randn(n);
+    b0 = randn(n, 1) + 1i * randn(n, 1);
+
+    phys_res = struct(  'A', @(z) A0 - diag(z), ...
+                        'b', @(z) b0, ...
+                        'B', @(x) -diag(x), ...
+                        'd', @(x) A0 * x - b0);
+
+   % Function handles for solving A.
+   solve_A = @(z, b) (@() phys_res.A(z) \ b);
+   solve_A_dagger = @(z, b) (@() phys_res.A(z)' \ b);
+
+
+##### SOURCE END #####
+--></body></html>
