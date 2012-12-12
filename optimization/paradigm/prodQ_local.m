@@ -1,8 +1,10 @@
 %% prodQ_local
 % Produce Q(z) using a local (adjoint) optimization paradigm.
 
-function [P, q, state] = prodQ_local(z, field_obj, phys_res, ...
-                                    solve_A, solve_A_dagger, state, varargin)
+%% Description
+%
+
+function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
 
 %% Input parameters
 
@@ -10,14 +12,24 @@ function [P, q, state] = prodQ_local(z, field_obj, phys_res, ...
  
     %% Parse inputs.
 
-    N = length(field_obj); % Number of fields/modes.
+    fobj = [opt_prob.field_obj];
+    pres = [opt_prob.phys_res];
+    invA = {opt_prob.solve_A};
+    invAd = {opt_prob.solve_A_dagger};
+
+    % Default values for the relaxed field objective.
+    a = 1;
+    p = 2;
+
+    N = length(fobj); % Number of fields/modes.
+
 
     %% Solve for x_i
     % That is to say, obtain the updated field variables.
 
     % Initiate solves.
     for k = 1 : N
-        cb{k} = solve_A{k}(z, phys_res(k).b(z));
+        cb{k} = invA{k}(z, pres(k).b(z));
     end
 
     % Complete solves.
@@ -30,51 +42,58 @@ function [P, q, state] = prodQ_local(z, field_obj, phys_res, ...
 
     % Compute error of x_i.
     for k = 1 : N
-        err(k) = norm(phys_res(k).A(z) * x{k} - phys_res(k).b(z)) ...
-                    / norm(phys_res(k).b(z));
+        err(k) = norm(pres(k).A(z) * x{k} - pres(k).b(z)) / norm(pres(k).b(z));
     end
-    err
 
     P = nan;
     q = nan;
 
-    %% Compute df_dx
+    %% Compute df/dx for each mode.
+    % We first use the form for the violation of the design objectives:
+    %
+    %
+    % $$ f_v(x_i) = \mbox{neg}(|C_i^\dagger x_i - \alpha_i|) + 
+    %               \mbox{neg}(|\beta_i - C_i^\dagger x_i|), $$
+    %
+    % where $\mbox{neg}(u) = u$ if $u < 0$ and $0$ otherwise.
+    %
+    % The derivative with respect to $x_i$ is then
+    %
+    % $$ \partial f_v(x_i) / \partial x_i = 
+    %           \mbox{diag}(\tilde{a}) C_i^\dagger$$
+    %
+    % where the elements of vector $\tilde{a}$ are either
+    % $(\pm c_{ij}^\dagger x_i)^\star / |c_{ij}^\dagger x_i|$, or 
+    % $0$ respectively, 
+    % depending on whether the $\alpha$, $\beta$, or neither limit is violated.
+    %
 
-    a = 1; % Normalization factor in relaxed field objective.
-    p = 2; % Exponent in relaxed field objective.
+    % Function handle to compute the degree that a mode currently violates
+    % its design objectives.
+    f_viol = @(alpha, beta, C, x) ...
+                ((abs(C'*x) - alpha) < 0) .* (abs(C'*x) - alpha) + ...
+                ((beta - abs(C'*x)) < 0) .* (beta - abs(C'*x));
 
-    alpha = field_obj(k).alpha;
-    C = field_obj(k).C;
-    f_i = @(x) ((abs(C'*x) - alpha) < 0) .* (-abs(C'*x) + alpha);
-    f = @(x) sum(f_i(x));
-
-    df_dx = (- (p/a) * (-abs(C'*x{k}) + alpha).^(p-1) .* sign(C'*x{k}))' * C';
-
-    fun = @(x) abs(C'*x);
+    % Derivative of f_viol with respect to x.
+    df_viol_dx = @(alpha, beta, C, x) diag( ...
+                ((abs(C'*x) - alpha) < 0) .* conj(C'*x)./abs(C'*x) + ...
+                ((beta - abs(C'*x)) < 0) .* conj(-C'*x)./abs(C'*x)) * C';
+                
     
-    df_dx = ((C'*x{k})'./abs(C'*x{k})') * C';
+    % Calculate f and df/dx (for individual modes).
+    for k = 1 : N
+        alpha = fobj(k).alpha;
+        beta = fobj(k).beta;
+        C = fobj(k).C;
 
-    C = (C(:,:)); 
-    fun = @(x) sum(abs(C'*x));
-    df_dx = @(x) (conj(C'*x)./abs(C'*x)).' * C';
+        f_i(k) = sum(f_viol(alpha, beta, C, x{k}).^p);
+        df_i_dx{k} = sum(p * diag(f_viol(alpha, beta, C, x{k}).^(p-1)) ...
+                            * df_viol_dx(alpha, beta, C, x{k}), 1);
 
-%     f_i = @(x) ((abs(C'*x) - alpha) < 0) .* (abs(C'*x) - alpha);
-%     df_dx = @(x) diag(((abs(C'*x) - alpha) < 0) .* diag(
-    fi = @(x) ((abs(C'*x) - alpha) < 0) .* (abs(C'*x) - alpha);
-    dfi_dx = @(x) diag(((abs(C'*x) - alpha) < 0) .* conj(C'*x)./abs(C'*x)) * C';
-
-    p = 1 + abs(randn(1));
-    a = randn(1);
-    fun = @(x) sum((1/a) * (-fi(x)).^p);
-    df_dx = @(x) sum(diag((p/a) * (-fi(x)).^(p-1)) * (-dfi_dx(x)), 1);
-
-    y = x{1};
-    p
-    a
-    fi(y).^p
-    fun(y)
-    derivative_tester(fun, df_dx(y), fun(y), y, 1e-6)
-
+%         % Use this to check derivative.
+%         derivative_tester(@(x) sum(f_viol(alpha, beta, C, x).^p), ...
+%                             df_i_dx, f_i, x{k}, 1e-6)
+    end
 
     %% Compute grad_F
 
