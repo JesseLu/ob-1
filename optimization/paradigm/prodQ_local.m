@@ -34,7 +34,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         kappa_shrink_rate = state.kappa_shrink_rate;
        
         prev_F = state.F;
-        prev_grad_F = state.prev_grad_F;
+        prev_grad_F = state.grad_F;
     end
  
 
@@ -120,12 +120,13 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         F = F + sum(f{k});
     end
 
-    %% Compute grad_F based on success of previous step
+    %% Compute grad_F
     % If previous step failed, simply use the previous value of grad_F.
 
     % First check if previous step succeeded or failed.
 
     if F <= prev_F % Previous step succeeded.
+        prev_step_successful = true;
 
         % Update kappa and recompute grad_F.
         kappa = kappa * kappa_growth_rate;
@@ -150,6 +151,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         grad_F = sum(grad_F_indiv, 2);
 
     else % Previous step failed.
+        prev_step_successful = false;
 
         % Update kappa, and use old value of grad_F.
         kappa = kappa * kappa_shrink_rate;
@@ -199,7 +201,8 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
                     'kappa_shrink_rate', kappa_shrink_rate, ...
                     'F', F, ...
                     'grad_F', grad_F, ...
-                    'f', {f});
+                    'f', {f}, ...
+                    'prev_step_successful', prev_step_successful);
 
 
 end % End of prodQ_local function.
