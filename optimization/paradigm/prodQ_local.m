@@ -10,12 +10,33 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
 
 %% Output parameters
  
-    %% Parse inputs.
+    %% Parse inputs
 
+    % Short-hand variables from the values of the opt_prob parameter.
     fobj = [opt_prob.field_obj];
     pres = [opt_prob.phys_res];
     invA = {opt_prob.solve_A};
     invAd = {opt_prob.solve_A_dagger};
+
+    % Determine the current state of the optimization.
+    if isempty(state) % No previous state, assume this is the first iteration.
+        kappa = 1; % Default value for kappa.
+        kappa_growth_rate = 1.1; % Percentage increase for a successful step.
+        kappa_shrink_rate = 0.5; % Percentage decrease for a failed step.
+
+        kappa = kappa / kappa_growth_rate; % 0-th step always successful...
+        
+        prev_F = Inf;
+        prev_grad_F = nan;
+    else
+        kappa = state.kappa;
+        kappa_growth_rate = state.kappa_growth_rate;
+        kappa_shrink_rate = state.kappa_shrink_rate;
+       
+        prev_F = state.F;
+        prev_grad_F = state.prev_grad_F;
+    end
+ 
 
     % Default values for the relaxed field objective.
     a = 1;
@@ -46,7 +67,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
     end
 
 
-    %% Compute df/dx for each mode.
+    %% Compute df/dx for each mode
     % We first use the form for the violation of the design objectives:
     %
     %
@@ -84,35 +105,57 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         beta = fobj(k).beta;
         C = fobj(k).C;
 
-        f(k) = sum(f_viol(alpha, beta, C, x{k}).^p);
-        df_dx{k} = sum(p * diag(f_viol(alpha, beta, C, x{k}).^(p-1)) ...
+        f{k} = 1/a * f_viol(alpha, beta, C, x{k}).^p;
+        df_dx{k} = sum((p/a) * diag(f_viol(alpha, beta, C, x{k}).^(p-1)) ...
                             * df_viol_dx(alpha, beta, C, x{k}), 1);
 
 %         % Use this to check derivative.
 %         derivative_tester(@(x) sum(f_viol(alpha, beta, C, x).^p), ...
 %                             df_dx, f, x{k}, 1e-6);
     end
-
-    %% Compute grad_F
-
-    % Initiate A_dagger solves.
+    
+    % Compute the overall value of the design objective.
+    F = 0;
     for k = 1 : N
-        cb{k} = invAd{k}(z, df_dx{k}');
+        F = F + sum(f{k});
     end
 
-    % Complete A_dagger solves.
-    done = false * ones(N, 1);
-    while ~all(done)
+    %% Compute grad_F based on success of previous step
+    % If previous step failed, simply use the previous value of grad_F.
+
+    % First check if previous step succeeded or failed.
+
+    if F <= prev_F % Previous step succeeded.
+
+        % Update kappa and recompute grad_F.
+        kappa = kappa * kappa_growth_rate;
+
+        % Initiate A_dagger solves.
         for k = 1 : N
-            [d{k}, done(k)] = cb{k}(); 
+            cb{k} = invAd{k}(z, df_dx{k}');
         end
-    end
 
-    % Compute the gradient.
-    for k = 1 : N
-        grad_F_indiv(:,k) = -d{k}' * pres(k).B(x{k});
+        % Complete A_dagger solves.
+        done = false * ones(N, 1);
+        while ~all(done)
+            for k = 1 : N
+                [d{k}, done(k)] = cb{k}(); 
+            end
+        end
+
+        % Compute the gradient.
+        for k = 1 : N
+            grad_F_indiv(:,k) = -d{k}' * pres(k).B(x{k});
+        end
+        grad_F = sum(grad_F_indiv, 2);
+
+    else % Previous step failed.
+
+        % Update kappa, and use old value of grad_F.
+        kappa = kappa * kappa_shrink_rate;
+        grad_F = prev_grad_F;
+
     end
-    grad_F = sum(grad_F_indiv, 2);
 
 %     % Use this to check grad_F.
 %     function [f] = my_f(z)
@@ -131,16 +174,32 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
 %         end
 %         
 %         for k = 1 : N
-%             f_indiv(k) = sum(f_viol(fobj(k).alpha, fobj(k).beta, ...
+%             f_indiv(k) = sum(1/a * f_viol(fobj(k).alpha, fobj(k).beta, ...
 %                                     fobj(k).C, x{k}).^p);
 %         end
 %         f = sum(f_indiv);
 %     end
-%     derivative_tester(@my_f, grad_F', sum(f), z, 1e-6);
+%     derivative_tester(@my_f, grad_F', F, z, 1e-6);
+
+
 
     %% Form Q(z)
+    %
+    % $$ Q(z) = \frac{1}{2}\|z - z_0\|^2 + \kappa \nabla_z F^\dagger (z - z_0) 
+    %   = \frac{1}{2}\|z - (z_0 - \kappa \nabla_z F)\|^2 + \mbox{const.} $$
 
-    P = nan;
-    q = nan;
+    P = speye(length(grad_F));
+    q = z - kappa * grad_F;
+
+    
+    %% Update state
+
+    state = struct( 'kappa', kappa, ...
+                    'kappa_growth_rate', kappa_growth_rate, ...
+                    'kappa_shrink_rate', kappa_shrink_rate, ...
+                    'F', F, ...
+                    'grad_F', grad_F, ...
+                    'f', {f});
+
 
 end % End of prodQ_local function.
