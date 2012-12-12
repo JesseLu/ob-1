@@ -45,8 +45,6 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         err(k) = norm(pres(k).A(z) * x{k} - pres(k).b(z)) / norm(pres(k).b(z));
     end
 
-    P = nan;
-    q = nan;
 
     %% Compute df/dx for each mode.
     % We first use the form for the violation of the design objectives:
@@ -86,17 +84,63 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         beta = fobj(k).beta;
         C = fobj(k).C;
 
-        f_i(k) = sum(f_viol(alpha, beta, C, x{k}).^p);
-        df_i_dx{k} = sum(p * diag(f_viol(alpha, beta, C, x{k}).^(p-1)) ...
+        f(k) = sum(f_viol(alpha, beta, C, x{k}).^p);
+        df_dx{k} = sum(p * diag(f_viol(alpha, beta, C, x{k}).^(p-1)) ...
                             * df_viol_dx(alpha, beta, C, x{k}), 1);
 
 %         % Use this to check derivative.
 %         derivative_tester(@(x) sum(f_viol(alpha, beta, C, x).^p), ...
-%                             df_i_dx, f_i, x{k}, 1e-6)
+%                             df_dx, f, x{k}, 1e-6);
     end
 
     %% Compute grad_F
 
+    % Initiate A_dagger solves.
+    for k = 1 : N
+        cb{k} = invAd{k}(z, df_dx{k}');
+    end
+
+    % Complete A_dagger solves.
+    done = false * ones(N, 1);
+    while ~all(done)
+        for k = 1 : N
+            [d{k}, done(k)] = cb{k}(); 
+        end
+    end
+
+    % Compute the gradient.
+    for k = 1 : N
+        grad_F_indiv(:,k) = -d{k}' * pres(k).B(x{k});
+    end
+    grad_F = sum(grad_F_indiv, 2);
+
+%     % Use this to check grad_F.
+%     function [f] = my_f(z)
+%     % Private function to compute the value of f.
+%         % Initiate solves.
+%         for k = 1 : N
+%             cb{k} = invA{k}(z, pres(k).b(z));
+%         end
+% 
+%         % Complete solves.
+%         done = false * ones(N, 1);
+%         while ~all(done)
+%             for k = 1 : N
+%                 [x{k}, done(k)] = cb{k}();
+%             end
+%         end
+%         
+%         for k = 1 : N
+%             f_indiv(k) = sum(f_viol(fobj(k).alpha, fobj(k).beta, ...
+%                                     fobj(k).C, x{k}).^p);
+%         end
+%         f = sum(f_indiv);
+%     end
+%     derivative_tester(@my_f, grad_F', sum(f), z, 1e-6);
+
     %% Form Q(z)
 
+    P = nan;
+    q = nan;
 
+end % End of prodQ_local function.

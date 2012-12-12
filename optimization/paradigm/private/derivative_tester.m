@@ -12,3 +12,4 @@ function [err] = test_derivative(fun, df_dz, f0, z0, step_len)
 
     err = norm(delta_empirical - delta_derivative) / norm(delta_empirical);
 
+    fprintf('Percent error in derivative: %e\n', err);
