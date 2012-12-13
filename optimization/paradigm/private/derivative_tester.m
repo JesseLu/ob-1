@@ -3,7 +3,7 @@ function [err] = test_derivative(fun, df_dz, f0, z0, step_len)
 % Check a derivative.
     
     % Produce a random direction.
-    dz = randn(size(z0));
+    dz = randn(size(z0)) + 1i * randn(size(z0));
     dz = step_len * dz / norm(dz);
 
     % Evaluate delta in that direction empirically

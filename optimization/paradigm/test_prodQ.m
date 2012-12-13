@@ -13,11 +13,19 @@ function test_prodQ(n_max, test_time)
         n = randi(n_max);
         N = randi(n);
         p = randi(n);
+        n = 10;
+        N = 1;
+        p = 1;
         [opt_prob] = my_create_test_problem(N, n, p);
-        if test_prodQ_local_descent(randn(n, 1), opt_prob)
+        z = randn(n, 1) + i *randn(n, 1);
+        test_result = test_prodQ_local_descent(z, opt_prob);
+        if test_result == true
             fprintf('.');
+        elseif isnan(test_result)
+            % Do nothing, just skip.
         else
             fprintf('f');
+
             error('Test failure for parameters: N=%d, n=%d, p=%d', N, n, p);
         end
     end
@@ -34,20 +42,33 @@ function test_prodQ(n_max, test_time)
 function [success] = test_prodQ_local_descent(z, opt_prob)
     state = [];
     success = false;
-    for k = 1 : 100
+
+    % Take an initial step.
+    [P, q, state] = prodQ_local(z, opt_prob, state);
+    if state.F == 0
+        success = nan;
+        return
+    end
+    z = q;
+
+    % TODO: Force a small value for kappa (e.g. 1e-6)
+    for k = 1 : 10
         [P, q, state] = prodQ_local(z, opt_prob, state);
+%         state.prev_step_successful
+%         fprintf('%f', state.F)
         if state.prev_step_successful
             success = true;
-            return
+            break
         end
     end
+    state.grad_F
 
 
 
 
 %% Private function to create a test problem
 function [opt_prob] = my_create_test_problem(num_modes, n, p)
-    z_sol = randn(n, 1);
+    z_sol = randn(n, 1) + i *randn(n, 1);
     for k = 1 : num_modes
         [fo, pr, sa, sd] = my_create_test_case(z_sol, n, p);
         opt_prob(k) = struct(   'field_obj', fo, ...
@@ -103,7 +124,6 @@ function [field_obj, phys_res, solve_A, solve_A_dagger] = ...
 
     % Create the field objective.
     C = randn(n, p) + 1i * randn(n, p);
-    C = C .* (rand(n,p) < 0.1);
     field_obj = struct( 'alpha', abs(C'*x) * rand(1), ...
                         'beta',  abs(C'*x) / rand(1), ...
                         'C', C);

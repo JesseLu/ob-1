@@ -20,7 +20,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
 
     % Determine the current state of the optimization.
     if isempty(state) % No previous state, assume this is the first iteration.
-        kappa = 1; % Default value for kappa.
+        kappa = 1e-3; % Default value for kappa.
         kappa_growth_rate = 1.1; % Percentage increase for a successful step.
         kappa_shrink_rate = 0.5; % Percentage decrease for a failed step.
 
@@ -28,13 +28,16 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         
         prev_F = Inf;
         prev_grad_F = nan;
+        prev_z = nan;
     else
         kappa = state.kappa;
         kappa_growth_rate = state.kappa_growth_rate;
         kappa_shrink_rate = state.kappa_shrink_rate;
        
+        prev_f = state.f;
         prev_F = state.F;
         prev_grad_F = state.grad_F;
+        prev_z = state.z;
     end
  
 
@@ -108,10 +111,6 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         f{k} = 1/a * f_viol(alpha, beta, C, x{k}).^p;
         df_dx{k} = sum((p/a) * diag(f_viol(alpha, beta, C, x{k}).^(p-1)) ...
                             * df_viol_dx(alpha, beta, C, x{k}), 1);
-
-%         % Use this to check derivative.
-%         derivative_tester(@(x) sum(f_viol(alpha, beta, C, x).^p), ...
-%                             df_dx, f, x{k}, 1e-6);
     end
     
     % Compute the overall value of the design objective.
@@ -125,7 +124,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
 
     % First check if previous step succeeded or failed.
 
-    if F <= prev_F % Previous step succeeded.
+    if F < prev_F % Previous step succeeded.
         prev_step_successful = true;
 
         % Update kappa and recompute grad_F.
@@ -146,16 +145,20 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
 
         % Compute the gradient.
         for k = 1 : N
-            grad_F_indiv(:,k) = -d{k}' * pres(k).B(x{k});
+            df_dz(k,:) = -d{k}' * pres(k).B(x{k});
         end
-        grad_F = sum(grad_F_indiv, 2);
+        grad_F = sum(df_dz', 2);
+
 
     else % Previous step failed.
         prev_step_successful = false;
 
-        % Update kappa, and use old value of grad_F.
+        % Update kappa, and use old value of grad_F and z.
         kappa = kappa * kappa_shrink_rate;
+        f = prev_f;
+        F = prev_F;
         grad_F = prev_grad_F;
+        z = prev_z;
 
     end
 
@@ -202,6 +205,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
                     'F', F, ...
                     'grad_F', grad_F, ...
                     'f', {f}, ...
+                    'z', z, ...
                     'prev_step_successful', prev_step_successful);
 
 
