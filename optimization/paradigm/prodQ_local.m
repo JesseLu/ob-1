@@ -19,31 +19,38 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
     invAd = {opt_prob.solve_A_dagger};
 
     % Determine the current state of the optimization.
-    if isempty(state) % No previous state, assume this is the first iteration.
-        kappa = 1e-3; % Default value for kappa.
-        kappa_growth_rate = 1.1; % Percentage increase for a successful step.
-        kappa_shrink_rate = 0.5; % Percentage decrease for a failed step.
+    if isempty(state) % No previous state, use the default state.
+        state.kappa = 1 / 1.1; % Default value for kappa.
+        state.kappa_growth_rate = 1.1; % Percent increase for a successful step.
+        state.kappa_shrink_rate = 0.5; % Percent decrease for a failed step.
 
-        kappa = kappa / kappa_growth_rate; % 0-th step always successful...
+        % Default values for the relaxed field objective.
+        state.a = 1;
+        state.p = 2;
         
-        prev_F = Inf;
-        prev_grad_F = nan;
-        prev_z = nan;
-    else
-        kappa = state.kappa;
-        kappa_growth_rate = state.kappa_growth_rate;
-        kappa_shrink_rate = state.kappa_shrink_rate;
-       
-        prev_f = state.f;
-        prev_F = state.F;
-        prev_grad_F = state.grad_F;
-        prev_z = state.z;
+        state.f = nan;
+        state.F = Inf;
+        state.grad_F = nan;
+        state.z = nan;
     end
- 
 
-    % Default values for the relaxed field objective.
-    a = 1;
-    p = 2;
+    % Accept any forced parameters contained in varargin.
+    for k = 2 : 2 : length(varargin)
+        state = setfield(state, varargin{k-1}, varargin{k});
+    end
+
+    % Obtain state parameters.
+    kappa = state.kappa;
+    kappa_growth_rate = state.kappa_growth_rate;
+    kappa_shrink_rate = state.kappa_shrink_rate;
+   
+    a = state.a;
+    p = state.p;
+
+    prev_f = state.f;
+    prev_F = state.F;
+    prev_grad_F = state.grad_F;
+    prev_z = state.z;
 
     N = length(fobj); % Number of fields/modes.
 
@@ -202,6 +209,8 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
     state = struct( 'kappa', kappa, ...
                     'kappa_growth_rate', kappa_growth_rate, ...
                     'kappa_shrink_rate', kappa_shrink_rate, ...
+                    'a', a, ...
+                    'p', p, ...
                     'F', F, ...
                     'grad_F', grad_F, ...
                     'f', {f}, ...

@@ -7,26 +7,29 @@
 function test_prodQ(n_max, test_time)
 
     start_time = tic;
-%% Simple tests
+
+    %% Simple tests
     fprintf('prodQ_local descent test:');
     while toc(start_time) < test_time
+        % Create a random test problem.
         n = randi(n_max);
         N = randi(n);
         p = randi(n);
-        n = 10;
-        N = 1;
-        p = 1;
         [opt_prob] = my_create_test_problem(N, n, p);
+
+        % Perform the local descent test from a random starting point.
         z = randn(n, 1) + i *randn(n, 1);
-        test_result = test_prodQ_local_descent(z, opt_prob);
+        test_result = test_prodQ_local_descent(z, opt_prob, ...
+                                            abs(randn(1)), 1 + abs(randn(1)));
+
+        % Check for success.
         if test_result == true
             fprintf('.');
-        elseif isnan(test_result)
+        elseif isnan(test_result) % Test inconclusive (e.g. F = 0 initially).
             % Do nothing, just skip.
         else
-            fprintf('f');
-
-            error('Test failure for parameters: N=%d, n=%d, p=%d', N, n, p);
+            fprintf('f\n');
+            warning('Test failure for parameters: N=%d, n=%d, p=%d', N, n, p);
         end
     end
     fprintf('\n');
@@ -39,31 +42,27 @@ function test_prodQ(n_max, test_time)
 % to be randomly chosen.
 % For this reason, this function simply tests if F can be lowered at all
 % from a random starting point.
-function [success] = test_prodQ_local_descent(z, opt_prob)
-    state = [];
+function [success] = test_prodQ_local_descent(z, opt_prob, a, p)
     success = false;
 
-    % Take an initial step.
-    [P, q, state] = prodQ_local(z, opt_prob, state);
-    if state.F == 0
+    % Take an initial step, needed since first step is always a "success".
+    [P, q, state] = prodQ_local(z, opt_prob, [], 'a', a, 'p', p);
+    z = q; % Simple update.
+
+    if state.F == 0 % If we are already at minimum, test is inconclusive.
         success = nan;
         return
     end
-    z = q;
 
-    % TODO: Force a small value for kappa (e.g. 1e-6)
-    for k = 1 : 10
-        [P, q, state] = prodQ_local(z, opt_prob, state);
-%         state.prev_step_successful
-%         fprintf('%f', state.F)
-        if state.prev_step_successful
+    state.kappa_shrink_rate = 0.1; % Make sure to shrink quickly
+    for k = 1 : 12 
+        [P, q, state] = prodQ_local(z, opt_prob, state); % Take a step.
+        z = q; % Simple update.
+        if state.prev_step_successful 
             success = true;
             break
         end
     end
-    state.grad_F
-
-
 
 
 %% Private function to create a test problem
