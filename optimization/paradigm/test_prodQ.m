@@ -7,6 +7,13 @@
 function test_prodQ(n_max, test_time)
 
     start_time = tic;
+    N = 2;
+    n = 10;
+    p = 3;
+    [opt_prob, x_valid] = my_create_test_problem(N, n, p);
+    z = randn(n, 1) + i *randn(n, 1);
+    prodQ_global(z, opt_prob, [], x_valid);
+    return
 
     %% Simple tests
     fprintf('prodQ_local descent test:');
@@ -66,10 +73,10 @@ function [success] = test_prodQ_local_descent(z, opt_prob, a, p)
 
 
 %% Private function to create a test problem
-function [opt_prob] = my_create_test_problem(num_modes, n, p)
+function [opt_prob, x_valid] = my_create_test_problem(num_modes, n, p)
     z_sol = randn(n, 1) + i *randn(n, 1);
     for k = 1 : num_modes
-        [fo, pr, sa, sd] = my_create_test_case(z_sol, n, p);
+        [fo, pr, sa, sd, x_valid{k}] = my_create_test_case(z_sol, n, p);
         opt_prob(k) = struct(   'field_obj', fo, ...
                                 'phys_res', pr, ...
                                 'solve_A', sa, ...
@@ -102,7 +109,7 @@ function [opt_prob] = my_create_test_problem(num_modes, n, p)
 % also created.
 %
 
-function [field_obj, phys_res, solve_A, solve_A_dagger] = ...
+function [field_obj, phys_res, solve_A, solve_A_dagger, x_valid] = ...
             my_create_test_case(z, n, p)
 
     % Create the physics residual.
@@ -119,12 +126,13 @@ function [field_obj, phys_res, solve_A, solve_A_dagger] = ...
     solve_A_dagger = @(z, b) (@() my_callback(phys_res.A(z)' \ b));
 
     % Create a random solution (x, z).
-    x = phys_res.A(z) \ phys_res.b(z);
+    x_valid = phys_res.A(z) \ phys_res.b(z);
 
     % Create the field objective.
     C = randn(n, p) + 1i * randn(n, p);
-    field_obj = struct( 'alpha', abs(C'*x) * rand(1), ...
-                        'beta',  abs(C'*x) / rand(1), ...
+    C = C * diag(exp(i*angle(C'*x_valid))); % Forces the initial angle to be 0.
+    field_obj = struct( 'alpha', abs(C'*x_valid) * rand(1), ...
+                        'beta',  abs(C'*x_valid) / rand(1), ...
                         'C', C);
            
 

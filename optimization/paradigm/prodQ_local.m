@@ -191,7 +191,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
 %         end
 %         f = sum(f_indiv);
 %     end
-%     derivative_tester(@my_f, grad_F', F, z, 1e-6);
+%     derivative_tester(@my_f, grad_F', F, z, 1e-6, @real);
 
 
 
