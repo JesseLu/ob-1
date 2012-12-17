@@ -13,8 +13,8 @@ function [err] = test_derivative(fun, df_dz, f0, z0, step_len, varargin)
     dz = step_len * dz / norm(dz);
 
     % Evaluate delta in that direction empirically
-    delta_empirical = fun(z0 + dz) - f0;
-    delta_derivative = optional_fun(df_dz * dz);
+    delta_empirical = fun(z0 + dz) - f0
+    delta_derivative = optional_fun(df_dz * dz)
 
     err = norm(delta_empirical - delta_derivative) / norm(delta_empirical);
 

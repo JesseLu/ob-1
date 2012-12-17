@@ -49,7 +49,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     f = @(alpha, beta, C, t, phi, x) -(1/2) * sum(ln(beta.^2 - abs(C'*x).^2));
     grad_f = @(alpha, beta, C, t, phi, x) sum((diag((C'*x)./(beta.^2 - abs(C'*x).^2)) * C')',2);
     Hess_f = @(alpha, beta, C, t, phi, x) C * diag(1./(beta.^2-abs(C'*x).^2) + ...
-                                        (C'*x)./(beta.^2-abs(C'*x).^2).^2) * (C');
+                                        2*abs(C'*x).^2./(beta.^2-abs(C'*x).^2).^2) * (C');
 %     f = @(alpha, beta, C, t, phi, x) 0.5 * norm(beta - x)^2;
 %     df = @(alpha, beta, C, t, phi, x) x';
     for k = 1 : N
@@ -62,7 +62,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
         Hess_fi = @(x) Hess_f(alpha, beta, C, t, phi, x);
         x = xv{k};
         derivative_tester(fi, grad_fi(x)', fi(x), x, 1e-6, @real);
-        derivative_tester(grad_fi, Hess_fi(x)', grad_fi(x), x, 1e-6);
+        derivative_tester(grad_fi, Hess_fi(x), grad_fi(x), x, 1e-6);
     end
 
 %% Other private functions
