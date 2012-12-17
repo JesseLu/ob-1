@@ -7,9 +7,9 @@
 function test_prodQ(n_max, test_time)
 
     start_time = tic;
-    N = 2;
-    n = 10;
-    p = 3;
+    N = 1;
+    n = 4;
+    p = 1;
     [opt_prob, x_valid] = my_create_test_problem(N, n, p);
     z = randn(n, 1) + i *randn(n, 1);
     prodQ_global(z, opt_prob, [], x_valid);
@@ -130,7 +130,7 @@ function [field_obj, phys_res, solve_A, solve_A_dagger, x_valid] = ...
 
     % Create the field objective.
     C = randn(n, p) + 1i * randn(n, p);
-    C = C * diag(exp(i*angle(C'*x_valid))); % Forces the initial angle to be 0.
+    % C = C * diag(exp(i*angle(C'*x_valid))); % Forces the initial angle to be 0.
     field_obj = struct( 'alpha', abs(C'*x_valid) * rand(1), ...
                         'beta',  abs(C'*x_valid) / rand(1), ...
                         'C', C);
