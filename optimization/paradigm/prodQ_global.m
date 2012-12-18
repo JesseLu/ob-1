@@ -17,7 +17,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     %% Parse inputs
     t = 1;
     phi = 0;
-    xv = varargin{1};
+    x_prev = varargin{1};
 
     % Short-hand variables from the values of the opt_prob parameter.
     fobj = [opt_prob.field_obj];
@@ -85,8 +85,47 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
                 2 * C * diag(1./(beta.^2 - abs(C'*x).^2)) * C' + ...
                 4 * C * diag(abs(C'*x).^2./(beta.^2 - abs(C'*x).^2).^2) * C';
 
+    for k = 1 : N
+        alpha = fobj(k).alpha;
+        beta = fobj(k).beta;
+        C = fobj(k).C;
+        phi = angle(C' * x_prev{k});
+
+        f{k} = @(x) 1/t * (f_lo(alpha, C, phi, x) + f_hi(beta, C, x));
+        grad_f{k} = @(x) 1/t * (grad_f_lo(alpha, C, phi, x) + ...
+                                grad_f_hi(beta, C, x));
+        Hess_f{k} = @(x) 1/t * (Hess_f_lo(alpha, C, phi, x) + ...
+                                Hess_f_hi(beta, C, x));
+    end
+
     %% Form the problem to minimize.
     % Minimize using Newton's method.
+    x = x_prev{1};
+    k = 1;
+    err_thresh = 1e-6;
+    for j = 1 : 100
+        % Compute Newton step and decrement.
+        delta_x = -(eye(n) + Hess_f{k}(x)) \ grad_f{k}(x);
+        lambda = real(grad_f{k}(x)' * -delta_x);
+
+        % Check termination condition.
+        if lambda^2/2 <= err_thresh
+            j
+            lambda^2/2
+            fprintf('done');
+            return
+        end
+
+        % Perform line search in Newton step direction.
+        step_size = line_search_convex(f{k}, grad_f{k}, delta_x, x, 1e-6);
+
+        % Update x.
+        x = x + step_size * delta_x;
+    end
+    lambda
+    delta_x
+
+end % End of prodQ_global function.
 
 %% Other private functions
 function [z] = ln(x)
@@ -98,4 +137,4 @@ function [z] = ln(x)
     else
         z = log(x);
     end
-
+end % End of ln function.
