@@ -1,5 +1,5 @@
 
-function [err] = dt2(fun, df_dz, f0, z0, step_len, varargin)
+function [err] = hessian_tester(fun, df_dz, f0, z0, step_len, varargin)
 % Check a derivative.
     
     if ~isempty(varargin)
@@ -18,7 +18,7 @@ function [err] = dt2(fun, df_dz, f0, z0, step_len, varargin)
 
     err = norm(delta_empirical - delta_derivative) / norm(delta_empirical);
 
-    fprintf('Percent error in derivative: %e', err);
+    fprintf('Percent error in hessian: %e', err);
 
     if norm(delta_empirical) == 0
         fprintf(' [no empirical change]');
