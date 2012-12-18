@@ -29,9 +29,18 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     n = length(z);
 
  
-    %% Form the relaxed form of the field design objective
+    %% Check the derivative and Hessian of the relaxed field design objective
+    % Note the special form that the Hessian must take in order to be tested.
  
-    % This works for beta.
+
+    % This is the working set for alpha (lower limit).
+    f = @(alpha, beta, C, t, phi, x) -sum(ln(real(exp(-i*phi).*(C'*x)) - alpha));
+    grad_f = @(alpha, beta, C, t, phi, x) ...
+                -sum((C * diag(exp(i*phi)./(real(exp(-i*phi).*(C'*x)) - alpha))), 2);
+    Hess_f = @(alpha, beta, C, t, phi, x, dx) ...
+                C * diag(exp(i*phi)./(real(exp(-i*phi).*(C'*x)) - alpha).^2) * real(exp(-i*phi) .* (C' * dx));
+
+    % This is the working set for beta (upper limit).
     f = @(alpha, beta, C, t, phi, x) ...
                 -sum(ln(1/2*(beta.^2 - abs(C'*x).^2)));
     grad_f = @(alpha, beta, C, t, phi, x) ...
@@ -40,13 +49,6 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
                 C * diag(1./(1/2*(beta.^2 - abs(C'*x).^2))) * C' * dx + ...
                 C * diag((C'*x)./(1/2*(beta.^2 - abs(C'*x).^2)).^2) * ...
                 real(diag((x'*C))*C'*dx);
-
-   % This is basically the working set for alpha (lower limit).
-    f = @(alpha, beta, C, t, phi, x) -sum(ln(real(exp(-i*phi).*(C'*x)) - alpha));
-    grad_f = @(alpha, beta, C, t, phi, x) ...
-                -sum((C * diag(exp(i*phi)./(real(exp(-i*phi).*(C'*x)) - alpha))), 2);
-    Hess_f = @(alpha, beta, C, t, phi, x, dx) ...
-                C * diag(exp(i*phi)./(real(exp(-i*phi).*(C'*x)) - alpha).^2) * real(exp(-i*phi) .* (C' * dx));
 
    % This is the combined set.
     f = @(alpha, beta, C, t, phi, x) ...
@@ -61,6 +63,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
                 4 * C * diag((C'*x)./(beta.^2 - abs(C'*x).^2).^2) * ...
                 real(diag((x'*C))*C'*dx);
 
+    % Used to test the derivative.
     for k = 1 : N
         alpha = fobj(k).alpha;
         beta = fobj(k).beta;
@@ -72,6 +75,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
         Hess_fi = @(x, dx) Hess_f(alpha, beta, C, t, phi, x, dx);
 
         x = xv{k};
+
         derivative_tester(fi, grad_fi(x)', fi(x), x, 1e-6, @real);
         hessian_tester(grad_fi, @(dx) Hess_fi(x, dx), grad_fi(x), x, 1e-6);
 
