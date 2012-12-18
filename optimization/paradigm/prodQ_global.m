@@ -29,57 +29,64 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     n = length(z);
 
  
-    %% Check the derivative and Hessian of the relaxed field design objective
+    %% Check the gradient and Hessian of the relaxed field design objective
     % Note the special form that the Hessian must take in order to be tested.
- 
+% 
+%     % Function handles for calculating the gradient and Hessian.
+%     f = @(alpha, beta, C, t, phi, x) ...
+%                 -sum(ln(real(exp(-i*phi).*(C'*x)) - alpha)) + ...
+%                 -sum(ln(beta.^2 - abs(C'*x).^2));
+%     grad_f = @(alpha, beta, C, t, phi, x) ...
+%                 -sum((C * diag(exp(i*phi)./ ...
+%                                 (real(exp(-i*phi).*(C'*x)) - alpha))), 2) + ...
+%                 2 * sum(C * diag((C'*x)./(beta.^2 - abs(C'*x).^2)), 2);
+%     Hess_f = @(alpha, beta, C, t, phi, x, dx) ...
+%                 C * diag(exp(i*phi)./(real(exp(-i*phi).*(C'*x)) - alpha).^2) ...
+%                     * real(exp(-i*phi) .* (C' * dx)) + ...
+%                 C * diag(2./(beta.^2 - abs(C'*x).^2)) * C' * dx + ...
+%                     4 * C * diag((C'*x)./(beta.^2 - abs(C'*x).^2).^2) * ...
+%                     real(diag((x'*C))*C'*dx);
+% 
+%     % Test derivative for every mode.
+%     for k = 1 : N
+%         alpha = fobj(k).alpha;
+%         beta = fobj(k).beta;
+%         C = fobj(k).C;
+%         phi = angle(C' * xv{k});
+% 
+%         fi = @(x) f(alpha, beta, C, t, phi, x);
+%         grad_fi = @(x) grad_f(alpha, beta, C, t, phi, x);
+%         Hess_fi = @(x, dx) Hess_f(alpha, beta, C, t, phi, x, dx);
+% 
+%         x = xv{k};
+% 
+%         derivative_tester(fi, grad_fi(x)', fi(x), x, 1e-6, @real);
+%         hessian_tester(grad_fi, @(dx) Hess_fi(x, dx), grad_fi(x), x, 1e-6);
+%     end
 
-    % This is the working set for alpha (lower limit).
-    f = @(alpha, beta, C, t, phi, x) -sum(ln(real(exp(-i*phi).*(C'*x)) - alpha));
-    grad_f = @(alpha, beta, C, t, phi, x) ...
-                -sum((C * diag(exp(i*phi)./(real(exp(-i*phi).*(C'*x)) - alpha))), 2);
-    Hess_f = @(alpha, beta, C, t, phi, x, dx) ...
-                C * diag(exp(i*phi)./(real(exp(-i*phi).*(C'*x)) - alpha).^2) * real(exp(-i*phi) .* (C' * dx));
+    %% Function handles for the gradients and Hessians.
+    % Compose function handles that describe the form of the function,
+    % its gradient, as well as its Hessian.
 
-    % This is the working set for beta (upper limit).
-    f = @(alpha, beta, C, t, phi, x) ...
-                -sum(ln(1/2*(beta.^2 - abs(C'*x).^2)));
-    grad_f = @(alpha, beta, C, t, phi, x) ...
-                sum(C * diag((C'*x)./(1/2*(beta.^2 - abs(C'*x).^2))), 2);
-    Hess_f = @(alpha, beta, C, t, phi, x, dx) ...
-                C * diag(1./(1/2*(beta.^2 - abs(C'*x).^2))) * C' * dx + ...
-                C * diag((C'*x)./(1/2*(beta.^2 - abs(C'*x).^2)).^2) * ...
-                real(diag((x'*C))*C'*dx);
+    % Barrier functions.
+    f_lo = @(alpha, C, phi, x) -sum(ln(real(exp(-i*phi).*(C'*x)) - alpha));
+    f_hi = @(beta, C, x) -sum(ln(beta.^2 - abs(C'*x).^2));
 
-   % This is the combined set.
-    f = @(alpha, beta, C, t, phi, x) ...
-                -sum(ln(real(exp(-i*phi).*(C'*x)) - alpha)) + ...
-                -sum(ln(beta.^2 - abs(C'*x).^2));
-    grad_f = @(alpha, beta, C, t, phi, x) ...
-                -sum((C * diag(exp(i*phi)./(real(exp(-i*phi).*(C'*x)) - alpha))), 2) + ...
-                2 * sum(C * diag((C'*x)./(beta.^2 - abs(C'*x).^2)), 2);
-    Hess_f = @(alpha, beta, C, t, phi, x, dx) ...
-                C * diag(exp(i*phi)./(real(exp(-i*phi).*(C'*x)) - alpha).^2) * real(exp(-i*phi) .* (C' * dx)) + ...
-                C * diag(2./(beta.^2 - abs(C'*x).^2)) * C' * dx + ...
-                4 * C * diag((C'*x)./(beta.^2 - abs(C'*x).^2).^2) * ...
-                real(diag((x'*C))*C'*dx);
+    % Gradient of barrier functions.
+    grad_f_lo = @(alpha, C, phi, x) -sum(C * ...
+                    diag(exp(i*phi)./ (real(exp(-i*phi).*(C'*x)) - alpha)), 2);
+    grad_f_hi = @(beta, C, x) 2 * sum(C * ...
+                    diag((C'*x)./(beta.^2 - abs(C'*x).^2)), 2);
 
-    % Used to test the derivative.
-    for k = 1 : N
-        alpha = fobj(k).alpha;
-        beta = fobj(k).beta;
-        C = fobj(k).C;
-        phi = angle(C' * xv{k});
+    % Hessian of barrier functions.
+    Hess_f_lo = @(alpha, C, phi, x, dx) ...
+                C * diag(1./(real(exp(-i*phi).*(C'*x)) - alpha).^2) * C';
+    Hess_f_hi = @(beta, C, x, dx) ...
+                2 * C * diag(1./(beta.^2 - abs(C'*x).^2)) * C' + ...
+                4 * C * diag(abs(C'*x).^2./(beta.^2 - abs(C'*x).^2).^2) * C';
 
-        fi = @(x) f(alpha, beta, C, t, phi, x);
-        grad_fi = @(x) grad_f(alpha, beta, C, t, phi, x);
-        Hess_fi = @(x, dx) Hess_f(alpha, beta, C, t, phi, x, dx);
-
-        x = xv{k};
-
-        derivative_tester(fi, grad_fi(x)', fi(x), x, 1e-6, @real);
-        hessian_tester(grad_fi, @(dx) Hess_fi(x, dx), grad_fi(x), x, 1e-6);
-
-    end
+    %% Form the problem to minimize.
+    % Minimize using Newton's method.
 
 %% Other private functions
 function [z] = ln(x)
