@@ -40,9 +40,18 @@ function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
         grad_next = grad(x + step_size * delta_x);
         err_next = calc_err(grad_next);
 
-        if err_next < 0 % Found a new lower bound.
+        if isinf(f_next) || err_next >= 0 % Found an upper bound.
+            step_hi = step_size;
+            f_hi = f_next;
+            grad_hi = grad_next;
+            err_hi = err_next;
+
+            break % We have found the step size interval.
+
+
+       else % Found a new lower bound.
             if f_next > f_lo % Sanity check!
-                error('Function is not convex!');
+                warning('Non-convexity detected in line search.');
             end
 
             % Set new lower bound.
@@ -51,14 +60,7 @@ function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
             grad_lo = grad_next;
             err_lo = err_next;
         
-        else % Found upper bound.
-            step_hi = step_size;
-            f_hi = f_next;
-            grad_hi = grad_next;
-            err_hi = err_next;
-
-            break % We have found the step size interval.
-        end
+       end
 
         step_size = step_size * 2; % Increase interval.
     end
@@ -72,23 +74,22 @@ function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
         err_next = calc_err(grad_next);
 
         % Check termination condition.
-        if abs(err_next) < err_thresh 
+        if (abs(err_next) < err_thresh) && ~isinf(f_next)
             optimal_step = step_size;
             return
         end
 
         % If not terminated, get new bounds.
-        if err_next < 0 % New lower bound.
-            step_lo = step_size;
-            f_lo = f_next;
-            grad_lo = grad_next;
-            err_lo = err_next;
-
-        else % New upper bound.
+        if isinf(f_next) || (err_next >= 0)% New upper bound.
             step_hi = step_size;
             f_hi = f_next;
             grad_hi = grad_next;
             err_hi = err_next;
+        else % New lower bound.
+            step_lo = step_size;
+            f_lo = f_next;
+            grad_lo = grad_next;
+            err_lo = err_next;
         end
     end
 
