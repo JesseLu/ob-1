@@ -1,0 +1,241 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>line_search_convex</title><meta name="generator" content="MATLAB 7.13"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2012-12-18"><meta name="DC.source" content="line_search_convex.m"><style type="text/css">
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head><body><div class="content"><h1>line_search_convex</h1><!--introduction--><p>Search for the minimum along a line of a convex function.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Description</a></li><li><a href="#3">Verify step-size lower bound</a></li><li><a href="#4">Find step size interval</a></li><li><a href="#5">Bisect to optimize step size</a></li></ul></div><h2>Description<a name="1"></a></h2><p>Given a convex function and a search direction, the point where the function value is minimized along the search direction is found.</p><p>Assumes that the function is convex, meaning that there is a global minimum along the line. This also implies that the gradient of the function can be used to determine the sub-interval along the line where the minimum is found.</p><p>This function also assumes that the function returns real scalar values, although it may accept complex arguments (the gradient may be complex).</p><pre class="codeinput"><span class="keyword">function</span> [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
+</pre><pre class="codeinput">    calc_err = @(gradient) real(gradient' * delta_x) / norm(delta_x);
+</pre><h2>Verify step-size lower bound<a name="3"></a></h2><p>Make sure that the search direction is actually a descent direction.</p><pre class="codeinput">    step_lo = 0;
+    f_lo = f(x);
+    grad_lo = grad(x);
+    err_lo = calc_err(grad_lo);
+
+    <span class="keyword">if</span> err_lo &gt;= 0 <span class="comment">% Not a descent direction!</span>
+        error(<span class="string">'Search direction is not a descent direction.'</span>);
+    <span class="keyword">end</span>
+</pre><h2>Find step size interval<a name="4"></a></h2><p>Try increasingly larger step sizes until we know (by the gradient) that we have gone too far. We will then have a lower- and upper-bound for the optimal step size.</p><pre class="codeinput">    step_size = 1; <span class="comment">% Always guess 1 first, in case delta_x is the Newton step.</span>
+
+    <span class="keyword">while</span> step_size &lt; 1e6 <span class="comment">% Don't step bigger than this.</span>
+        f_next = f(x + step_size * delta_x);
+        grad_next = grad(x + step_size * delta_x);
+        err_next = calc_err(grad_next);
+
+        <span class="keyword">if</span> err_next &lt; 0 <span class="comment">% Found a new lower bound.</span>
+            <span class="keyword">if</span> f_next &gt; f_lo <span class="comment">% Sanity check!</span>
+                error(<span class="string">'Function is not convex!'</span>);
+            <span class="keyword">end</span>
+
+            <span class="comment">% Set new lower bound.</span>
+            step_lo = step_size;
+            f_lo = f_next;
+            grad_lo = grad_next;
+            err_lo = err_next;
+
+        <span class="keyword">else</span> <span class="comment">% Found upper bound.</span>
+            step_hi = step_size;
+            f_hi = f_next;
+            grad_hi = grad_next;
+            err_hi = err_next;
+
+            <span class="keyword">break</span> <span class="comment">% We have found the step size interval.</span>
+        <span class="keyword">end</span>
+
+        step_size = step_size * 2; <span class="comment">% Increase interval.</span>
+    <span class="keyword">end</span>
+</pre><h2>Bisect to optimize step size<a name="5"></a></h2><pre class="codeinput">    <span class="keyword">for</span> k = 1 : 1000 <span class="comment">% Maximum of 1000 iterations, should never need more.</span>
+        step_size = mean([step_lo, step_hi]);
+        f_next = f(x + step_size * delta_x);
+        grad_next = grad(x + step_size * delta_x);
+        err_next = calc_err(grad_next);
+
+        <span class="comment">% Check termination condition.</span>
+        <span class="keyword">if</span> abs(err_next) &lt; err_thresh
+            optimal_step = step_size;
+            <span class="keyword">return</span>
+        <span class="keyword">end</span>
+
+        <span class="comment">% If not terminated, get new bounds.</span>
+        <span class="keyword">if</span> err_next &lt; 0 <span class="comment">% New lower bound.</span>
+            step_lo = step_size;
+            f_lo = f_next;
+            grad_lo = grad_next;
+            err_lo = err_next;
+
+        <span class="keyword">else</span> <span class="comment">% New upper bound.</span>
+            step_hi = step_size;
+            f_hi = f_next;
+            grad_hi = grad_next;
+            err_hi = err_next;
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">% Did not terminate, give best step along with warning.</span>
+    warning(<span class="string">'Could not reach termination condition (err: %e).'</span>, abs(err_next));
+    optimal_step = step_size;
+</pre><pre class="codeinput">    <span class="keyword">end</span>
+</pre><p class="footer"><br>
+      Published with MATLAB&reg; 7.13<br></p></div><!--
+##### SOURCE BEGIN #####
+%% line_search_convex
+% Search for the minimum along a line of a convex function.
+
+%% Description
+% Given a convex function and a search direction, the point where the function
+% value is minimized along the search direction is found.
+%
+% Assumes that the function is convex, meaning that there is a global minimum
+% along the line. This also implies that the gradient of the function can be
+% used to determine the sub-interval along the line where the minimum is found.
+%
+% This function also assumes that the function returns real scalar values,
+% although it may accept complex arguments (the gradient may be complex).
+
+function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
+
+    calc_err = @(gradient) real(gradient' * delta_x) / norm(delta_x);
+
+    %% Verify step-size lower bound
+    % Make sure that the search direction is actually a descent direction.
+
+    step_lo = 0;
+    f_lo = f(x);
+    grad_lo = grad(x);
+    err_lo = calc_err(grad_lo);
+
+    if err_lo >= 0 % Not a descent direction!
+        error('Search direction is not a descent direction.');
+    end
+
+    %% Find step size interval 
+    % Try increasingly larger step sizes until we know (by the gradient)
+    % that we have gone too far. We will then have a lower- and upper-bound for
+    % the optimal step size.
+
+    step_size = 1; % Always guess 1 first, in case delta_x is the Newton step.
+        
+    while step_size < 1e6 % Don't step bigger than this.
+        f_next = f(x + step_size * delta_x);
+        grad_next = grad(x + step_size * delta_x);
+        err_next = calc_err(grad_next);
+
+        if err_next < 0 % Found a new lower bound.
+            if f_next > f_lo % Sanity check!
+                error('Function is not convex!');
+            end
+
+            % Set new lower bound.
+            step_lo = step_size;
+            f_lo = f_next;
+            grad_lo = grad_next;
+            err_lo = err_next;
+        
+        else % Found upper bound.
+            step_hi = step_size;
+            f_hi = f_next;
+            grad_hi = grad_next;
+            err_hi = err_next;
+
+            break % We have found the step size interval.
+        end
+
+        step_size = step_size * 2; % Increase interval.
+    end
+
+    %% Bisect to optimize step size
+
+    for k = 1 : 1000 % Maximum of 1000 iterations, should never need more.
+        step_size = mean([step_lo, step_hi]);
+        f_next = f(x + step_size * delta_x);
+        grad_next = grad(x + step_size * delta_x);
+        err_next = calc_err(grad_next);
+
+        % Check termination condition.
+        if abs(err_next) < err_thresh 
+            optimal_step = step_size;
+            return
+        end
+
+        % If not terminated, get new bounds.
+        if err_next < 0 % New lower bound.
+            step_lo = step_size;
+            f_lo = f_next;
+            grad_lo = grad_next;
+            err_lo = err_next;
+
+        else % New upper bound.
+            step_hi = step_size;
+            f_hi = f_next;
+            grad_hi = grad_next;
+            err_hi = err_next;
+        end
+    end
+
+    % Did not terminate, give best step along with warning.
+    warning('Could not reach termination condition (err: %e).', abs(err_next));
+    optimal_step = step_size;
+
+    
+    end
+
+
+##### SOURCE END #####
+--></body></html>
