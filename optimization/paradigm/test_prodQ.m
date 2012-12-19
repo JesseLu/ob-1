@@ -6,16 +6,36 @@
 
 function test_prodQ(n_max, test_time)
 
+    %% Simple test for prodQ_global
+    % Just makes sure that the Newton method terminates successfully.
     start_time = tic;
-    N = 8;
-    n = 100;
-    p = 4;
-    [opt_prob, x_valid] = my_create_test_problem(N, n, p);
-    z = randn(n, 1) + i *randn(n, 1);
-    prodQ_global(z, opt_prob, [], 'x', x_valid);
-    return
+    fprintf('prodQ_global Newton convergence test:');
+    while toc(start_time) < test_time
+        n = randi(n_max);
+        N = randi(ceil(n/5));
+        p = randi(ceil(n/5));
 
-    %% Simple tests
+        % Create a test problem
+        [opt_prob, x_valid] = my_create_test_problem(N, n, p);
+
+        % Using a random z, check convergence of Newton method.
+        z = randn(n, 1) + i *randn(n, 1);
+        [P, q, state] = prodQ_global(z, opt_prob, [], 'x', x_valid, ...
+                                                    'vis_progress', @(p) p);
+        % Check convergence.
+        if state.newton_success
+            % fprintf('[success]\n\n');
+            fprintf('.');
+        else
+            warning('did not achieve convergence (N=%d, n=%d, p=%d).', N, n, p);
+        end
+    end
+    fprintf('\n');
+
+
+    %% Simple test for prodQ_local
+    % Tests that the descent direction is actually a descent direction.
+    start_time = tic;
     fprintf('prodQ_local descent test:');
     while toc(start_time) < test_time
         % Create a random test problem.

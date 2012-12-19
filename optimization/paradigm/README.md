@@ -25,4 +25,4 @@ The specific paradigm can be chosen by using
   either the prodQ_local() or prodQ_global() functions.
 
 The quadratic problem, Q(z), is returned in the form of matrix P and vector q,
- where Q(z) = || Pz - q ||^2.  
+ where Q(z) = 1/2 * || Pz - q ||^2.  

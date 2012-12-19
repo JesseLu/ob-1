@@ -2,13 +2,9 @@
 % Produce Q(z) using a global (ADMM) optimization paradigm.
 
 %% Description
-%
+% 
 
-%% How to test for Hessian?
-% Hessian gives a quadratic estimation of the problem,
-% one way is to simply look for quadratic convergence for the solve.
-% Also, the Hessian can simply be calculated brute force.
-function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
+function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
 
 %% Input parameters
 
@@ -28,18 +24,19 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     % Determine the current state of the optimization.
     if isempty(state) % No previous state, use the default state.
         % Default value for t, used in the relaxed field objective.
-        state.t = 1e-3; 
-        state.rho = 10;
-
-        state.newton_err_thresh = 1e-6;
-        state.newton_max_steps = 100;
-        state.line_search_err_thresh = 1e-9;
-        state.vis_progress = @default_vis_progress;
-
-        state.x = nan;
         for k = 1 : N
-            state.u{k} = zeros(n, 1);
+            u_default{k} = zeros(n, 1);
         end
+
+        state = struct( 't', 1e-3, ...
+                        'rho', 10, ...
+                        'newton_err_thresh', 1e-6, ...
+                        'newton_max_steps', 100, ...
+                        'line_search_err_thresh', 1e-9, ...
+                        'vis_progress', @default_vis_progress, ...  
+                        'x', nan, ...
+                        'u', {u_default}, ...
+                        'update_u', false);
     end
 
     % Accept any forced parameters contained in varargin.
@@ -58,7 +55,23 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
  
     x = state.x;
     u = state.u;
+    update_u = state.update_u;
 
+    %% Update dual variables u
+
+    % Check if an update is needed.
+    if update_u
+        % Update u variables.
+        for k = 1 : N 
+            u{k} = u{k} + pres(k).A(z) * x{k} - pres(k).b(z);
+        end
+
+    else 
+        % Make sure to update u next time.
+        % In order to force u to never be updated, update_u must be set to false
+        % whenever prodQ_global is called.
+        update_u = true; 
+    end
 
     %% Compute A_dagger^-1 C values (tilde C)
     % The transformed values of C are used to efficiently calculate the Newton 
@@ -184,7 +197,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
                 mode_done(k) = true;
             end
 
-        end
+        end % End of mode iteration loop.
 
         vis_progress(progress); % Visualize our progress.
 
@@ -193,7 +206,36 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
             break
         end
 
+    end % End of Newton iteration loop.
+
+    if ~all(mode_done)
+        newton_success = false;
+        warning('Newton algorithm did not reach error threshold.');
+    else
+        newton_success = true;
     end
+
+
+    %% Form Q(z)
+    P = [];
+    q = [];
+    for k = 1 : N
+        P = [P; pres(k).B(x{k})];
+        q = [q; pres(k).d(x{k})];
+    end
+    
+    % Scale by a factor of rho.
+    P = sqrt(rho) * P;
+    q = sqrt(rho) * q;
+
+
+    %% Update state variable
+    state.newton_success = newton_success;
+    state.newton_progress = progress;
+
+    state.x = x;
+    state.u = u;
+    state.update_u = update_u;
 
 end % End of prodQ_global function.
 
@@ -218,11 +260,15 @@ function default_vis_progress(progress)
         len(k) = length(progress{k});
     end
 
-    fprintf('%d:', max(len)); % Print out iteration number.
+    fprintf('%3d:', max(len)); % Print out iteration number.
 
     % Print out the Newton decrement for each mode.
     for k = 1 : length(progress) 
-        fprintf(' %1.3e', progress{k}(end).newton_dec);
+        if length(progress{k}) < max(len)
+            fprintf(' [%1.1e]', progress{k}(end).newton_dec);
+        else
+            fprintf(' %1.3e', progress{k}(end).newton_dec);
+        end
     end
     fprintf('\n');
-end
+end % End of default_vis_progress function.
