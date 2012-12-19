@@ -106,17 +106,28 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
 
         r{k} = @(x) -exp(i*phi)./ (real(exp(-i*phi).*(C'*x)) - alpha) + ...
                     2 * (C'*x)./(beta.^2 - abs(C'*x).^2);
-        grad_f{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x);
+
+        % Normal gradient.
+        grad_f{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x); 
+
+        % Gradient that uses C tilde.
         grad_f{k} = @(x) rho * A' * (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
-        grad_f_sp{k} = @(x) (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
 
         s{k} = @(x) 1./(real(exp(-i*phi).*(C'*x)) - alpha).^2 + ...
                     2./(beta.^2 - abs(C'*x).^2) + ...
                     4 * abs(C'*x).^2./(beta.^2 - abs(C'*x).^2).^2;
+
+        % Normal Hessian.
         Hess_f{k} = @(x) rho * A' * A + ...
                     1/t * (C * diag(s{k}(x)) * C');
+
+        % Hessian that uses C tilde.
         Hess_f{k} = @(x) rho * A' * (eye(n) + 1/(rho*t) * (Ct{k} * diag(s{k}(x)) * Ct{k}')) * A;
-        M{k} = @(x) eye(n) - Ct{k} * inv((diag(rho*t./s{k}(x))) + Ct{k}'*Ct{k}) * Ct{k}';
+
+        grad_f_sp{k} = @(x) (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
+        M{k} = @(x) eye(n) - ...
+                    Ct{k} * inv((diag(rho*t./s{k}(x))) + Ct{k}'*Ct{k}) * Ct{k}';
+
 
     end
 
