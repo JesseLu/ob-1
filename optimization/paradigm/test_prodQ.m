@@ -8,7 +8,7 @@ function test_prodQ(n_max, test_time)
 
     start_time = tic;
     N = 3;
-    n = 300;
+    n = 100;
     p = 4;
     [opt_prob, x_valid] = my_create_test_problem(N, n, p);
     z = randn(n, 1) + i *randn(n, 1);
@@ -40,6 +40,7 @@ function test_prodQ(n_max, test_time)
         end
     end
     fprintf('\n');
+end
 
 
 %% Private function to test prodQ_local
@@ -70,6 +71,7 @@ function [success] = test_prodQ_local_descent(z, opt_prob, a, p)
             break
         end
     end
+end
 
 
 %% Private function to create a test problem
@@ -82,6 +84,7 @@ function [opt_prob, x_valid] = my_create_test_problem(num_modes, n, p)
                                 'solve_A', sa, ...
                                 'solve_A_dagger', sd);
     end
+end
 
 %% Private function to create a test case
 %
@@ -122,8 +125,8 @@ function [field_obj, phys_res, solve_A, solve_A_dagger, x_valid] = ...
                         'd', @(x) A0 * x - b0);
 
     % Create function handles for solving A.
-    solve_A = @(z, b) (@() my_callback(phys_res.A(z) \ b));
-    solve_A_dagger = @(z, b) (@() my_callback(phys_res.A(z)' \ b));
+    solve_A = @(z, b) get_callback(phys_res.A(z) \ b);
+    solve_A_dagger = @(z, b) get_callback(phys_res.A(z)' \ b);
 
     % Create a random solution (x, z).
     x_valid = phys_res.A(z) \ phys_res.b(z);
@@ -134,12 +137,28 @@ function [field_obj, phys_res, solve_A, solve_A_dagger, x_valid] = ...
     field_obj = struct( 'alpha', abs(C'*x_valid) * rand(1), ...
                         'beta',  abs(C'*x_valid) / rand(1), ...
                         'C', C);
+end
            
 
 
 
 %% Other private functions
 
-function [x, done] = my_callback(x)
-% Dummy callback function
-    done = true;  
+function [cb] = get_callback(x)
+% Return a simple (dummy) callback function.
+    is_done = false;
+    function [result, done] = my_simple_callback()
+        if rand(1) < 0.5 || is_done
+            is_done = true;
+            result = x;
+            done = true;  
+        else
+            result = nan;
+            done = false;
+        end
+    end
+
+    cb = @my_simple_callback;
+end
+
+

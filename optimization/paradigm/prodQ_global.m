@@ -48,11 +48,13 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     % Obtain state parameters.
     t = state.t;
     rho = state.rho;
-    x_prev = state.x;
+    x = state.x;
     u = state.u;
     newton_max_steps = state.newton_max_steps;
     newton_err_thresh = state.newton_err_thresh; 
  
+    %% Compute A_dagger C values
+
     % Initiate A_dagger solves.
     cnt = 0;
     for k = 1 : N
@@ -88,43 +90,38 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     end
 
 
-    %% Function handles for the gradients and Hessians.
-    % Compose function handles that describe the form of the function,
-    % its gradient, as well as its Hessian.
+    %% Compose objective, gradient, and Hessian functional forms
+
     for k = 1 : N
         alpha = fobj(k).alpha;
         beta = fobj(k).beta;
         C = fobj(k).C;
-        phi = angle(C' * x_prev{k});
+        phi = angle(C' * x{k});
 
         A = pres(k).A(z);
         b = pres(k).b(z);
    
-        f{k} = @(x) rho/2 * norm(A*x - b + u{k})^2 + ...
-                    -1/t * sum(ln(real(exp(-i*phi).*(C'*x)) - alpha) + ...
-                                ln(beta.^2 - abs(C'*x).^2));
-
+        % Scale factors used in gradient and Hessian.
         r{k} = @(x) -exp(i*phi)./ (real(exp(-i*phi).*(C'*x)) - alpha) + ...
                     2 * (C'*x)./(beta.^2 - abs(C'*x).^2);
-
-        % Normal gradient.
-        grad_f{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x); 
-
-        % Gradient that uses C tilde.
-        grad_f{k} = @(x) rho * A' * (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
-
         s{k} = @(x) 1./(real(exp(-i*phi).*(C'*x)) - alpha).^2 + ...
                     2./(beta.^2 - abs(C'*x).^2) + ...
                     4 * abs(C'*x).^2./(beta.^2 - abs(C'*x).^2).^2;
 
-        % Normal Hessian.
-        Hess_f{k} = @(x) rho * A' * A + ...
-                    1/t * (C * diag(s{k}(x)) * C');
+        % Function composition of the objective and its gradient and Hessian.
+        f{k} = @(x) rho/2 * norm(A*x - b + u{k})^2 + ...
+                    -1/t * sum(ln(real(exp(-i*phi).*(C'*x)) - alpha) + ...
+                                ln(beta.^2 - abs(C'*x).^2));
+        grad{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x); 
+        Hess{k} = @(x) rho * A' * A + 1/t * (C * diag(s{k}(x)) * C');
 
-        % Hessian that uses C tilde.
-        Hess_f{k} = @(x) rho * A' * (eye(n) + 1/(rho*t) * (Ct{k} * diag(s{k}(x)) * Ct{k}')) * A;
+%         % Alternative function composition of gradient and Hessian using C tilde.
+%         grad{k} = @(x) rho * A' * (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
+%         Hess{k} = @(x) rho * A' * ...
+%                     (eye(n) + 1/(rho*t) * (Ct{k} * diag(s{k}(x)) * Ct{k}')) * A;
 
-        grad_f_sp{k} = @(x) (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
+        % Forms needed for efficient calculation of the Newton step.
+        abridged_grad{k} = @(x) (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
         M{k} = @(x) eye(n) - ...
                     Ct{k} * inv((diag(rho*t./s{k}(x))) + Ct{k}'*Ct{k}) * Ct{k}';
 
@@ -133,39 +130,63 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
 
     %% Form the problem to minimize.
     % Minimize using Newton's method.
-    x = x_prev{1};
-    k = 1;
+    % N = 1;
+    mode_done = false * ones(1, N);
 
     for j = 1 : newton_max_steps
-        % Compute Newton step and decrement.
-        delta_x = -(Hess_f{k}(x)) \ grad_f{k}(x);
+        % Initialize the computation for the Newton step.
+        unfinished_modes = find(~mode_done);
+        for k = unfinished_modes
+            cb{k} = invA{k}(z, -M{k}(x{k}) * abridged_grad{k}(x{k}));
+        end
 
-        % Do it the efficient way.
-        cb{k} = invA{k}(z, -M{k}(x) * grad_f_sp{k}(x));
-
-        done = false * ones(1, 1);
+        % Complete the Newton step computation.
+        done = mode_done; % Sets finished modes to true for computation.
         while ~all(done)
-            for k = 1 : 1
-                [d{k}, done(k)] = cb{k}();
+            for k = unfinished_modes
+                [delta_x{k}, done(k)] = cb{k}();
             end
         end
-        % norm(delta_x - d{k})
-        delta_x = d{k};
-        
-        lambda = sqrt(abs(real(grad_f{k}(x)' * -delta_x)));
 
-        fprintf('%d: %e, %e, %e\n', j, f{k}(x), norm(grad_f{k}(x)), lambda^2/2);
+        % Perform an iteration of the Newton algorithm.
+        for k = unfinished_modes
+            % Check the computation of the Newton step.
+            newton_step_error = norm(Hess{k}(x{k}) * delta_x{k} + grad{k}(x{k}));
 
-        % Check termination condition.
-        if lambda^2/2 <= newton_err_thresh
-            return
+            % Calculate the Newton decrement.
+            lambda = sqrt(abs(real(grad{k}(x{k})' * -delta_x{k})));
+
+            % Perform a line search in the Newton step direction.
+            step_size = line_search_convex(f{k}, grad{k}, delta_x{k}, x{k}, 1e-9);
+
+            % Update x.
+            x{k} = x{k} + step_size * delta_x{k};
+            
+            % Record the action and metrics of the step.
+            progress{k}(j) = struct('fval', f{k}(x{k}), ...
+                                    'grad_norm', norm(grad{k}(x{k})), ...
+                                    'newton_dec', lambda^2/2, ...
+                                    'step_size', step_size, ...
+                                    'newton_step_err', newton_step_error);
+
+            % Check termination condition.
+            if lambda^2/2 <= newton_err_thresh
+                mode_done(k) = true;
+            end
+
         end
 
-        % Perform line search in Newton step direction.
-        step_size = line_search_convex(f{k}, grad_f{k}, delta_x, x, 1e-9);
+        % Print progress.
+        fprintf('%d:', j);
+        for k = 1 : N 
+            fprintf(' %1.3e', progress{k}(end).newton_dec);
+        end
+        fprintf('\n');
 
-        % Update x.
-        x = x + step_size * delta_x;
+        if all(mode_done)
+            break
+        end
+
     end
 
 end % End of prodQ_global function.
