@@ -29,7 +29,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     if isempty(state) % No previous state, use the default state.
         % Default value for t, used in the relaxed field objective.
         state.t = 1e-3; 
-        state.rho = 1;
+        state.rho = 10;
 
         state.newton_err_thresh = 1e-6;
         state.newton_max_steps = 100;
@@ -86,7 +86,6 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
             err(k, l) = norm(pres(k).A(z)' * Ct{k}(:,l) - C(:,l));
         end
     end
-    err
 
 
     %% Function handles for the gradients and Hessians.
@@ -108,7 +107,8 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
         r{k} = @(x) -exp(i*phi)./ (real(exp(-i*phi).*(C'*x)) - alpha) + ...
                     2 * (C'*x)./(beta.^2 - abs(C'*x).^2);
         grad_f{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x);
-        grad_f{k} = @(x) rho * A' * (A*x - b + u{k} + 1/t * Ct{k} * r{k}(x));
+        grad_f{k} = @(x) rho * A' * (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
+        grad_f_sp{k} = @(x) (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
 
         s{k} = @(x) 1./(real(exp(-i*phi).*(C'*x)) - alpha).^2 + ...
                     2./(beta.^2 - abs(C'*x).^2) + ...
@@ -116,6 +116,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
         Hess_f{k} = @(x) rho * A' * A + ...
                     1/t * (C * diag(s{k}(x)) * C');
         Hess_f{k} = @(x) rho * A' * (eye(n) + 1/(rho*t) * (Ct{k} * diag(s{k}(x)) * Ct{k}')) * A;
+        M{k} = @(x) eye(n) - Ct{k} * inv((diag(rho*t./s{k}(x))) + Ct{k}'*Ct{k}) * Ct{k}';
 
     end
 
@@ -127,6 +128,19 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     for j = 1 : newton_max_steps
         % Compute Newton step and decrement.
         delta_x = -(Hess_f{k}(x)) \ grad_f{k}(x);
+
+        % Do it the efficient way.
+        cb{k} = invA{k}(z, -M{k}(x) * grad_f_sp{k}(x));
+
+        done = false * ones(1, 1);
+        while ~all(done)
+            for k = 1 : 1
+                [d{k}, done(k)] = cb{k}();
+            end
+        end
+        % norm(delta_x - d{k})
+        delta_x = d{k};
+        
         lambda = sqrt(abs(real(grad_f{k}(x)' * -delta_x)));
 
         fprintf('%d: %e, %e, %e\n', j, f{k}(x), norm(grad_f{k}(x)), lambda^2/2);
