@@ -29,6 +29,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     if isempty(state) % No previous state, use the default state.
         % Default value for t, used in the relaxed field objective.
         state.t = 1e-3; 
+        state.rho = 1;
 
         state.newton_err_thresh = 1e-6;
         state.newton_max_steps = 100;
@@ -46,15 +47,51 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
 
     % Obtain state parameters.
     t = state.t;
+    rho = state.rho;
     x_prev = state.x;
     u = state.u;
     newton_max_steps = state.newton_max_steps;
     newton_err_thresh = state.newton_err_thresh; 
+ 
+    % Initiate A_dagger solves.
+    cnt = 0;
+    for k = 1 : N
+        C = fobj(k).C;
+        for l = 1 : size(C, 2)
+            cnt = cnt + 1;
+            cb{k}{l} = invAd{k}(z, C(:,l));
+            done(cnt) = false;
+        end
+    end
+
+    % Complete A_dagger solves.
+    while ~all(done)
+        cnt = 0;
+        for k = 1 : N
+            C = fobj(k).C;
+            for l = 1 : size(C, 2)
+                cnt = cnt + 1;
+                [Ct_elem, done(cnt)] = cb{k}{l}(); 
+                if done(cnt)
+                    Ct{k}(:,l) = Ct_elem;
+                end
+            end
+        end
+    end
+
+    % Check results.
+    for k = 1 : N
+        C = fobj(k).C;
+        for l = 1 : size(C, 2)
+            err(k, l) = norm(pres(k).A(z)' * Ct{k}(:,l) - C(:,l));
+        end
+    end
+    err
+
 
     %% Function handles for the gradients and Hessians.
     % Compose function handles that describe the form of the function,
     % its gradient, as well as its Hessian.
-
     for k = 1 : N
         alpha = fobj(k).alpha;
         beta = fobj(k).beta;
@@ -64,20 +101,22 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
         A = pres(k).A(z);
         b = pres(k).b(z);
    
-        f{k} = @(x) 1/2 * norm(A*x - b + u{k})^2 + ...
+        f{k} = @(x) rho/2 * norm(A*x - b + u{k})^2 + ...
                     -1/t * sum(ln(real(exp(-i*phi).*(C'*x)) - alpha) + ...
                                 ln(beta.^2 - abs(C'*x).^2));
 
         r{k} = @(x) -exp(i*phi)./ (real(exp(-i*phi).*(C'*x)) - alpha) + ...
                     2 * (C'*x)./(beta.^2 - abs(C'*x).^2);
-        grad_f{k} = @(x) A' * (A*x - b + u{k}) + ...
-                    1/t * sum(C * diag(r{k}(x)), 2);
+        grad_f{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x);
+        grad_f{k} = @(x) rho * A' * (A*x - b + u{k} + 1/t * Ct{k} * r{k}(x));
 
         s{k} = @(x) 1./(real(exp(-i*phi).*(C'*x)) - alpha).^2 + ...
                     2./(beta.^2 - abs(C'*x).^2) + ...
                     4 * abs(C'*x).^2./(beta.^2 - abs(C'*x).^2).^2;
-        Hess_f{k} = @(x) A' * A + ...
+        Hess_f{k} = @(x) rho * A' * A + ...
                     1/t * (C * diag(s{k}(x)) * C');
+        Hess_f{k} = @(x) rho * A' * (eye(n) + 1/(rho*t) * (Ct{k} * diag(s{k}(x)) * Ct{k}')) * A;
+
     end
 
     %% Form the problem to minimize.
