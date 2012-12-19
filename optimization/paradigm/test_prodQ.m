@@ -7,7 +7,7 @@
 function test_prodQ(n_max, test_time)
 
     start_time = tic;
-    N = 3;
+    N = 8;
     n = 100;
     p = 4;
     [opt_prob, x_valid] = my_create_test_problem(N, n, p);

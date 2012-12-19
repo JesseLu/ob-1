@@ -33,6 +33,8 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
 
         state.newton_err_thresh = 1e-6;
         state.newton_max_steps = 100;
+        state.line_search_err_thresh = 1e-9;
+        state.vis_progress = @default_vis_progress;
 
         state.x = nan;
         for k = 1 : N
@@ -48,12 +50,19 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
     % Obtain state parameters.
     t = state.t;
     rho = state.rho;
-    x = state.x;
-    u = state.u;
+
     newton_max_steps = state.newton_max_steps;
     newton_err_thresh = state.newton_err_thresh; 
+    line_search_err_thresh = state.line_search_err_thresh;
+    vis_progress = state.vis_progress;
  
-    %% Compute A_dagger C values
+    x = state.x;
+    u = state.u;
+
+
+    %% Compute A_dagger^-1 C values (tilde C)
+    % The transformed values of C are used to efficiently calculate the Newton 
+    % step.
 
     % Initiate A_dagger solves.
     cnt = 0;
@@ -91,7 +100,6 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
 
 
     %% Compose objective, gradient, and Hessian functional forms
-
     for k = 1 : N
         alpha = fobj(k).alpha;
         beta = fobj(k).beta;
@@ -128,9 +136,10 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
 
     end
 
-    %% Form the problem to minimize.
+    %% Execute Newton's algorithm
     % Minimize using Newton's method.
-    % N = 1;
+
+    % Keeps track which modes have already been solved
     mode_done = false * ones(1, N);
 
     for j = 1 : newton_max_steps
@@ -157,7 +166,8 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
             lambda = sqrt(abs(real(grad{k}(x{k})' * -delta_x{k})));
 
             % Perform a line search in the Newton step direction.
-            step_size = line_search_convex(f{k}, grad{k}, delta_x{k}, x{k}, 1e-9);
+            step_size = line_search_convex(f{k}, grad{k}, delta_x{k}, x{k}, ...
+                                            line_search_err_thresh);
 
             % Update x.
             x{k} = x{k} + step_size * delta_x{k};
@@ -176,13 +186,9 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
 
         end
 
-        % Print progress.
-        fprintf('%d:', j);
-        for k = 1 : N 
-            fprintf(' %1.3e', progress{k}(end).newton_dec);
-        end
-        fprintf('\n');
+        vis_progress(progress); % Visualize our progress.
 
+        % Check overall termination condition.
         if all(mode_done)
             break
         end
@@ -191,7 +197,7 @@ function [P, q, status] = prodQ_global(z, opt_prob, state, varargin)
 
 end % End of prodQ_global function.
 
-%% Other private functions
+%% Private functions
 function [z] = ln(x)
 % Custom log function which returns nan for non-zero imaginary part and 
 % real part <= 0.
@@ -204,3 +210,19 @@ function [z] = ln(x)
         z = log(x);
     end
 end % End of ln function.
+
+function default_vis_progress(progress)
+% Print progress.
+    % Find the maximum number of iterations present over all the modes.
+    for k = 1 : length(progress)
+        len(k) = length(progress{k});
+    end
+
+    fprintf('%d:', max(len)); % Print out iteration number.
+
+    % Print out the Newton decrement for each mode.
+    for k = 1 : length(progress) 
+        fprintf(' %1.3e', progress{k}(end).newton_dec);
+    end
+    fprintf('\n');
+end
