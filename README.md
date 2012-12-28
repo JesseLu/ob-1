@@ -29,6 +29,11 @@ Ob-1 is divided into four modules:
     Given an optimization problem, attempts to produce an optimal design for it.
 
 
+Example usage
+-------------
+
+
+
 Do-now
 ------
 
