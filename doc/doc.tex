@@ -123,8 +123,17 @@ This allows us to form the extremely useful relationship,
     \E  {bi-affine property}
         {A_i(z)x_i - b_i(z) = B_i(x_i)z - d_i(x_i) = 0,}
     where $B(x_i) \in \comps^{n \times n}$, $d(x_i) \in \comps^n$ and
-    \BI $-\omega^2 E \to B_i(x_i)$, 
+    \BI $\epsilon \to z$,
+    \I  $-\omega^2 E \to B_i(x_i)$, and
     \I  $\curl \mu^{-1} \curl E \to d_i(x_i)$. \EI
+In general, the physics residual will be bi-affine in $x_i$ and $z$ 
+    as long as $\epsilon$ is a linear function of $z$.
+
+In contrast, in the most general case where $\epsilon(z)$ is not linear 
+    we can only say that
+    \E{}{A_i(z)x_i - b_i(z) = r_i(x_i, z) = 0,}
+    where $r_i(x_i, z)$ is a generalized residual function.
+
 
 \subsection{Definition of the field design objective}
 Although the field design objective $f_i(x_i)$ 
@@ -173,14 +182,16 @@ Lastly, fast convergence even to local minima may be difficult
 
 % \subsubsection{Separable convexity}
 That said, \eq{rigorous problem statement} is \emph{separably convex} 
-    in $x_i$ and $z$ if we ignore the non-convexity
+    in $x_i$ and $z$ for the special case where
+    $\epsilon$ is linear with respect to $z$, and
+    where we ignore the non-convexity
     in the field design objectives, $f_i(x_i)$, and
     assume that the structure design objective, $g(z)$, is convex as well.
 This is given because of the bi-affine property
     of the physics residual, as shown in \eq{bi-affine property}.
 
-The separably convex, or \emph{bi-convex}, properties of our problem
-    open the door for the use of alternating direction algorithms,
+The separably convex, or \emph{bi-convex}, properties of this special case
+    motivate us to use the use of alternating direction algorithms,
     and specifically the alternating directions 
     methods of multipliers (ADMM), % Ref. 
     for the implementation of a global optimization paradigm,
@@ -189,29 +200,29 @@ Of course, in this context we do not use the term ``global'' rigorously,
     but only to differentiate it from strategies that rely
     purely on local information.
 
-Lastly, since our problem is not bi-convex 
-    in the case of non-convex field or structure design objectives,
-    simple extensions to alternating direction algorithms are employed.
+Lastly, since the general problem is not bi-convex 
+    in the case of nonlinear $\epsilon(z)$ or non-convex design objectives,
+    extensions to alternating direction algorithms are necessarily employed.
 
-\subsection{Optimality condition}
-Based on the problem definition in \eq{rigorous problem statement},
-    we can write down a set of equations that, when met,
-    signal that we have arrived at a locally optimal point.
-Otherwise known as the Karush-Kuhn-Tucker (KKT) conditions, % Ref boyd
-    these are, for \eq{rigorous problem statement},
-    \EE {KKT conditions} % Check how these work out for complex values!!!
-        {|c_{ij}\T x_i| - \beta_{ij} &\le 0, \\
-        \alpha_{ij} - |c_{ij}\T x_i| &\le 0, \\
-        A_i(z)x_i - b_i(z) &= 0, \\
-%         % Lambda dual variables not needed because they do not appear 
-%         % in the last KKT condition.
-%         \lambda_{\alpha ij} &\ge 0, \\ 
-%         \lambda_{\beta ij} &\ge 0, \\
-%         \lambda_{\alpha ij}(|c_{ij}\T x_i| - \beta_{ij}) &= 0, \\
-%         \lambda_{\beta ij}(\alpha_{ij} - |c_{ij}\T x_i|) &= 0, \\
-        \nabla_z g(z) + \sum_i B(x_i)\T \nu_i &= 0,
-        }
-    where $\nu_i \in \comps^n$ are dual variables.
+% \subsection{Optimality condition}
+% Based on the problem definition in \eq{rigorous problem statement},
+%     we can write down a set of equations that, when met,
+%     signal that we have arrived at a locally optimal point.
+% Otherwise known as the Karush-Kuhn-Tucker (KKT) conditions, % Ref boyd
+%     these are, for \eq{rigorous problem statement},
+%     \EE {KKT conditions} % Check how these work out for complex values!!!
+%         {|c_{ij}\T x_i| - \beta_{ij} &\le 0, \\
+%         \alpha_{ij} - |c_{ij}\T x_i| &\le 0, \\
+%         A_i(z)x_i - b_i(z) &= 0, \\
+% %         % Lambda dual variables not needed because they do not appear 
+% %         % in the last KKT condition.
+% %         \lambda_{\alpha ij} &\ge 0, \\ 
+% %         \lambda_{\beta ij} &\ge 0, \\
+% %         \lambda_{\alpha ij}(|c_{ij}\T x_i| - \beta_{ij}) &= 0, \\
+% %         \lambda_{\beta ij}(\alpha_{ij} - |c_{ij}\T x_i|) &= 0, \\
+%         \nabla_z g(z) + \sum_i B(x_i)\T \nu_i &= 0,
+%         }
+%     where $\nu_i \in \comps^n$ are dual variables.
 
 
 \chapter{The optimization module}
@@ -231,14 +242,12 @@ Specifically, the user can choose to work in either
             to arrive at a structure by forcing
             the design objective to be met from the start. \EI
 
-Also, the user can choose between the various structure parameterizations 
-    which include density, boundary, 
-    continuous, and combinatoric parameterizations.
-These parameterizations describe the structure as either
-    \BI a material density at every point in space;
-    \I  a boundary between objects of different materials;
-    \I  a set of continuously variable user-defined parameters; or 
-    \I  a selective combination of user-defined objects. \EI
+In addition, the user can choose between continuous or discrete
+    structure parameterizations:
+    \BI the continuous parameterization constrains the values of $z$
+        to be within a continous, bounded range; on the other hand,
+    \I  the discrete parameterization constrains the values of $z$ 
+        within a finite set of allowable values. \EI
 
 
 \section{Structure of the module}
@@ -272,11 +281,11 @@ The interaction between these two submodules is illustrated in \fig{strategy}.
     \rput[r](-4.3,3){$z_\text{guess}$}
     \psline{->}(-4,3)(-2.4,3)
 
-    \rput[r](-1.9,0.8){$Q(z)$}
+    \rput[r](-1.9,0.8){$h(z)$}
     \psline(-1.6,1.8)(-1.6,0.2)
     \psline{->}(-1.6,0.2)(-1,0.2)
 
-    \rput[l](1.9,0.8){$\text{argmin}\, Q(z) + g(z)$}
+    \rput[l](1.9,0.8){$\text{argmin}\, g(z) + h(z)$}
     \psline(1.6,0.2)(1,0.2)
     \psline{<-}(1.6,1.8)(1.6,0.2)
 
@@ -288,16 +297,16 @@ The interaction between these two submodules is illustrated in \fig{strategy}.
         The optimization paradigm submodule
             accepts an initial structure $z_\text{guess}$
             and returns a final, optimized structure $z_\text{final}$.
-        This is accomplished by repeatedly passing quadratic functions $Q(z)$ 
+        This is accomplished by repeatedly passing functions $h(z)$ 
             to the structure parameterization module,
             which returns an updated structure $z$
-            which minimizes $Q(z) + g(z)$.}
+            which minimizes $g(z) + h(z)$.}
 \label{fig:strategy}
 \end{center} \end{figure}
 
 In essense, a design is achieved via repeated calls to the structure submodule
     by the paradigm submodule,
-    in which carefully chosen quadratic functions $Q(z)$ are minimized.
+    in which subsequent $h(z)$ are minimized.
 
 \section{The paradigm submodule}
 \subsection{The local optimization paradigm}
@@ -307,12 +316,12 @@ Specifically, we compute the derivative of the total field design objective with
     \E{total derivative of field design objective}
         {\grad_z F = \sum_i^N \grad_z f_i(x_i),}
     and then pass 
-    \E{}{Q(z) = \frac{1}{2}\norm{z-z_0}^2 + \kappa \grad_z F^\cT (z-z_0)}
+    \E{}{h(z) = \frac{1}{2}\norm{z-z_0}^2 + \kappa \grad_z F^\cT (z-z_0)}
     to the structure submodule, for some $\kappa$.
 
 The analogy with a steepest-descent strategy is apparent since 
-    the global minimum of $Q(z)$ can be found via
-    \E{}{\grad_z Q(z) = (z - z_0) + \kappa \grad F = 0,}
+    the global minimum of $h(z)$ can be found via
+    \E{}{\grad_z h(z) = (z - z_0) + \kappa \grad F = 0,}
     resulting in 
     \E{}{z = z_0 - \kappa \grad_z F,}
     from which we see that the role of $\kappa$ is to determine the step-size 
@@ -321,24 +330,32 @@ The analogy with a steepest-descent strategy is apparent since
 \subsubsection{Computation of $\grad_z F$}
 The derivatives of the individual field design objectives are found via
     \E{}{\frac{d}{dz} f_i(x_i) = \frac{\pd f_i}{\pd x_i} \frac{dx_i}{dz}.}
-To obtain ${dx_i}/{dz}$ we first differentiate the corresponding physics residual, 
+Assuming that the bi-affine property of the physics residual holds,
+    we can obtain ${dx_i}/{dz}$ 
+    via differentiation of the corresponding physics residual, 
     $A_i(z) x_i - b_i(z)$,
     \E{}{A_i(z) dx_i + dA_i(z) - db_i(z) = A_i(z)dx_i + B_i(x_i)dz,}
-    where $dA_i(z) - db_i(z) = B_i(x_i)dz$ 
-    as a result of the bi-affine property of the physics residual \eq{bi-affine property}.
+    where $dA_i(z) - db_i(z) = B_i(x_i)dz$.
 
 Assuming that physics is already satisfied, $A_i(z) x_i - b_i(z) = 0$,
     and that we want to keep the physics residual at 0,
     the following condition must then be satisfied,
     \E{}{A_i(z) dx_i = -B_i(x_i) dz}
     from which we obtain
-    \E{}{\frac{dx}{dz} = -A_i(z)^{-1} B_i(x_i).}
+    \E{}{\frac{dx_i}{dz} = -A_i(z)^{-1} B_i(x_i).}
 
-Efficient calculation of $dx/dz$ is almost always impossible since $B_i(x_i) \in \comps^{n \times n}$.
+Efficient calculation of $dx_i/dz$ is almost always impossible since $B_i(x_i) \in \comps^{n \times n}$.
 At the same time, since ${\pd f_i}/{\pd x_i} \in \comps^{1 \times m}$, we instead compute $df_i(x_i)/dz$ via
     \E{}{\frac{d}{dz} f_i(x_i) = -\frac{\pd f_i}{\pd x_i} A_i(z)^{-1} B_i(x_i) = 
         -\left(A_i(z)^{-\cT} \frac{\pd f_i}{\pd x_i}^\cT\right)^\cT B_i(x_i)}
+    or
+    \E{adjoint grad_z f}
+        {\grad_z f_i =  - B_i(x_i)\T A_i(z)^{-\cT} \grad_{x_i} f_i}
     which requires only one solve of $A_i^\cT$ as opposed to $n$ solves of $A_i$.
+
+For the case where $\epsilon$ is a nonlinear function of $z$,
+    we can simply replace $B_i(x_i)$ with 
+    $\tilde{B_i}(x_i, z) = \grad_z r_i(x_i, z)$.
 
 \subsubsection{Computation of $\pd f_i(x_i) / \pd x_i$}
 The definition of $f_i(x_i)$ as given in \eq{field design objective definition} is not differentiable 
@@ -379,12 +396,15 @@ ADMM obtains the solutions for $x$ and $z$ via
             z &\gets \argmin_{z} \Lag(x, z, u), \\
             u_i &\gets u_i + (A_i(x_i) z - b(x_i)), \quad i = 1,\ldots,N.}
 
-To obtain the correct $Q(z)$ which should be passed to the structure submodule,
+To obtain the correct $h(z)$ which should be passed to the structure submodule,
     we use \eq{bi-affine property} to write
     \E{}{\argmin_z \Lag = \argmin_z g(z) 
             + \sum_i^N \frac{\rho}{2} \norm{B_i(x_i) z - d(x_i) + u_i}^2}
     which means that
-    \E{}{Q(z) = \sum_i^N \frac{\rho}{2} \norm{B_i(x_i) z - d(x_i) + u_i}^2}
+    \E{}{h(z) = \sum_i^N \frac{\rho}{2} \norm{B_i(x_i) z - d(x_i) + u_i}^2,}
+    or more generally,
+    \E{}{h(z) = \sum_i^N \frac{\rho}{2} \norm{r_i(x_i, z) + u_i}^2.}
+
 
 \subsubsection{Computation of $\argmin_{x_i} \Lag$}
 Updating $x_i$, which is left to the paradigm submodule,
@@ -433,7 +453,7 @@ First we introduce
     in order to write
     \E{}{\grad_{x_i} \Lag(x, z, u) = \rho A_i(z)\T(A_i(z)x_i - b_i(z) 
                             + u_i + \tilde{c}_i).}
-For its part, the Hessian can be simplified using the matrix inversion lemma\footnote{\E{}{ (A + UCV)^{-1} = A^{-1} - A^{-1}U (C^{-1} + V A^{-1} U)^{-1} V A^{-1}}}.
+For its part, the Hessian can be simplified using the matrix inversion lemma\footnote{$(A + UCV)^{-1} = A^{-1} - A^{-1}U (C^{-1} + V A^{-1} U)^{-1} V A^{-1}$}.
 Coupled with the introduction of 
     \E{}{\tilde{C}_i = A_i(z)^{-\cT}\begin{bmatrix} 
                         \sqrt{\frac{s_1}{\rho t}}c_{i1} &
