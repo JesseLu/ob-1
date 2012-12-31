@@ -1,7 +1,7 @@
-Structure parameterization submodule
+Structure update submodule
 ====================================
 
-Updates the value of z, the structure parameterization
+Updates the value of z, 
 in order to minimize the sum of Q(z) + g(z), 
 where g(z) is the structure objective function.
 
@@ -9,10 +9,13 @@ where g(z) is the structure objective function.
 Description
 -----------
 
-If the allowable range of z is continous, 
-then the structure submodule uses a steepest-descent strategy
-to minimize Q(z) + g(z).
+The structure submodule allows for four update schemes
+with which to update p, where g(z) = I_0(z - m(p)) + w(p):
 
-However, if the allowable range of z is discrete,
-then the structure submodule updates z by trial-and-error
-utilizing the assumption that the elements of z are independent of one another.
+*   'continuous' which bounds the values of p to a continuous allowable range,
+*   'continuous-linear' which additionally signals that both m(p) and w(p)
+    are linear functions,
+*   'discrete' which sets the range of p 
+    to a finite set of descrete values, and
+*   'discrete-diagonal' which additionally signals that m(p), w(p), and Q(z)
+    are linear and diagonal functions.

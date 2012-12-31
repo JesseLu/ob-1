@@ -113,7 +113,8 @@ The physics residual, $A_i(z)x_i - b_i(z)$,
     \E  {wave equation in E}
         {(\curl \mu^{-1} \curl - \omega^2 \epsilon) E = -i \omega J}
         via
-    \BI $\curl \mu^{-1} \curl - \omega^2 \epsilon \to A_i(z)$, where $\epsilon$ is a function of $z$,
+    \BI $\curl \mu^{-1} \curl - \omega^2 \epsilon \to A_i(z)$, % where $\epsilon$ is a function of $z$,
+    \I  $\epsilon \to S_i z + \epsilon_{\text{const}, i}$,
     \I  $E \to x_i$, and
     \I  $-i \omega J \to b_i(z)$, typically constant with respect to $z$. \EI
 
@@ -124,8 +125,7 @@ This allows us to form the extremely useful relationship,
     \E  {bi-affine property}
         {A_i(z)x_i - b_i(z) = B_i(x_i)z - d_i(x_i) = 0,}
     where $B(x_i) \in \comps^{m \times n}$, $d(x_i) \in \comps^n$ and
-    \BI $\epsilon \to z$,
-    \I  $-\omega^2 E \to B_i(x_i)$, 
+    \BI  $-\omega^2 E \to B_i(x_i)$, 
     \I  $\curl \mu^{-1} \curl E \to d_i(x_i)$. \EI
 
 \section{Definition of the field design objective}
