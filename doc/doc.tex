@@ -21,7 +21,8 @@ Our goal is to create a software package
     to enable the design of nanophotonic devices.
 Specifically, our software produces designs for
     \emph{linear} nanophotonics devices based on
-    \emph{desired coupling strengths} between various optical ports.
+    \emph{desired coupling strengths} 
+    between various input and output fields.
 
 % Presently, almost all nanophotonic devices are designed
 %     by guessing what a good design might look like,
@@ -91,22 +92,22 @@ Finally, physics and simulation modules are provided
     
 
 
-\chapter{Theory}
+\chapter{Theory overview}
 \section{Mathematically rigorous statement of the problem}
 As previously stated, the problem we want to solve is 
     \EE {rigorous problem statement}
         {\minimize&  \sum_i^N f_i(x_i) + g(z) \\
         \subto&     A_i(z)x_i - b_i(z) = 0,\quad\text{for $i = 1, \ldots, N.$}}
 To now be more precise,
-    \BI $x_i \in \comps^n$ are the field variables,
+    \BI $x_i \in \comps^m$ are the field variables,
     \I  $z \in \reals^n$ is the structure variable,
-    \I  $f_i(x_i) \in \comps^n \to \reals$ are the field design objectives,
+    \I  $f_i(x_i) \in \comps^m \to \reals$ are the field design objectives,
     \I  $g(z) \in \reals^n \to \reals$ is the structure design objective,
     \I  $A_i(z)x_i - b_i(z)$ are the physics residuals, with
     \I  $A_i(z) \in \comps^{n \times n}$ and
     \I  $b_i(z) \in \comps^n$. \EI
 
-\subsection{Definition of physics residual}
+\section{Definition of physics residual}
 The physics residual, $A_i(z)x_i - b_i(z)$, 
     corresponds to the electromagnetic wave equation
     \E  {wave equation in E}
@@ -116,17 +117,18 @@ The physics residual, $A_i(z)x_i - b_i(z)$,
     \I  $E \to x_i$, and
     \I  $-i \omega J \to b_i(z)$, typically constant with respect to $z$. \EI
 
-\subsection{Bi-affine property of the physics residual}
+\section{Bi-affine property of the physics residual}
 Critically, \eq{wave equation in E} is not only linear in $E$,
     but is also affine in $\epsilon$.
 This allows us to form the extremely useful relationship,
     \E  {bi-affine property}
         {A_i(z)x_i - b_i(z) = B_i(x_i)z - d_i(x_i) = 0,}
-    where $B(x_i) \in \comps^{n \times n}$, $d(x_i) \in \comps^n$ and
-    \BI $-\omega^2 E \to B_i(x_i)$, 
+    where $B(x_i) \in \comps^{m \times n}$, $d(x_i) \in \comps^n$ and
+    \BI $\epsilon \to z$,
+    \I  $-\omega^2 E \to B_i(x_i)$, 
     \I  $\curl \mu^{-1} \curl E \to d_i(x_i)$. \EI
 
-\subsection{Definition of the field design objective}
+\section{Definition of the field design objective}
 Although the field design objective $f_i(x_i)$ 
     can take on virtually any form,
     we choose to define it very specifically as
@@ -144,18 +146,34 @@ Such a design objective implements the constraints
     constraining the power emitted into the optical modes
     represented by $c_{ij}$.
 
-\subsection{Choice of the structure design objective}
-In contrast to the narrow definition of the field design objective,
-    the structure design objective is relatively unconstrained;
-    taking on various forms to best suit the needs of
-    the structure parameterization in use.
+\section{Choice of the structure design objective}
+The form of the structure design objective consists of two parts,
+    \BI a structure parameterization function $m(p)$, and 
+    \I  a parameter weighting function $w(p)$. \EI
+Both use the variable $p$ which allows us 
+    to cast $z$ into arbitrary parameters of our choice.
+Together, the general form of the structure design objective is
+    \E  {structure design objective definition}
+        {g(z) = I_0(z - m(p)) + w(p),}
+    where $I_0$ is the indicator function on the set containing only $0$,
+    \E{}{I_0(u) = \begin{cases} 0 & u = 0, \\ 
+                                \infty & \text{otherwise.} \end{cases}}
+An alternative interpretation of \eq{structure design objective definition} 
+    is that it implements a hard constraint on $z$ 
+    via the parameterization function $m(z)$,
+    as well as a soft constraint on $z$ 
+    via the weighting function $w(z)$.
 
-\section{Properties of the problem}
-We now examine the general mathematical properties 
-    of the stated problem \eq{rigorous problem statement}.
+Additionally, constraints on the elements of $p$ include either
+    a bounded continuous range of allowable values, or
+    a finite set of discrete allowable values.
 
-\subsection{Convexity analysis}
-% \subsubsection{Joint non-convexity}
+% \section{Properties of the problem}
+% We now examine the general mathematical properties 
+%     of the stated problem \eq{rigorous problem statement}.
+
+\section{Convexity analysis}
+% \subsection{Joint non-convexity}
 First we note that, as presented, 
     \eq{rigorous problem statement} is non-convex 
     in the variables $x_i$ and $z$. % Ref boyd book
@@ -171,7 +189,7 @@ Lastly, fast convergence even to local minima may be difficult
     because methods such as Newton's method
     can not be directly applied to non-convex problems.
 
-% \subsubsection{Separable convexity}
+% \subsection{Separable convexity}
 That said, \eq{rigorous problem statement} is \emph{separably convex} 
     in $x_i$ and $z$ if we ignore the non-convexity
     in the field design objectives, $f_i(x_i)$, and
@@ -183,8 +201,7 @@ The separably convex, or \emph{bi-convex}, properties of our problem
     open the door for the use of alternating direction algorithms,
     and specifically the alternating directions 
     methods of multipliers (ADMM), % Ref. 
-    for the implementation of a global optimization paradigm,
-    as referred to in section \ref{capabilities of our software}.
+    for the implementation of a ``global'' optimization paradigm,
 Of course, in this context we do not use the term ``global'' rigorously,
     but only to differentiate it from strategies that rely
     purely on local information.
@@ -193,7 +210,7 @@ Lastly, since our problem is not bi-convex
     in the case of non-convex field or structure design objectives,
     simple extensions to alternating direction algorithms are employed.
 
-% \subsection{Optimality condition}
+% \section{Optimality condition}
 % Based on the problem definition in \eq{rigorous problem statement},
 %     we can write down a set of equations that, when met,
 %     signal that we have arrived at a locally optimal point.
@@ -216,9 +233,9 @@ Lastly, since our problem is not bi-convex
 
 \chapter{The optimization module}
 
-\section{Capabilities of the module}\label{capabilities of our software}
+\section{Capabilities of the module}
 We have implemented various 
-    \emph{optimization paradigms} and \emph{structure parameterizations}
+    \emph{optimization paradigms} and \emph{structure updates}
     which a user can arbitrarily combine in order to 
     to solve \eq{the plan (multi-mode)}.
 
@@ -231,11 +248,11 @@ Specifically, the user can choose to work in either
             to arrive at a structure by forcing
             the design objective to be met from the start. \EI
 
-In addition, the user can choose between continuous or discrete
-    structure parameterizations:
-    \BI the continuous parameterization constrains the values of $z$
+In addition, the user can choose between \emph{continuous} or \emph{discrete}
+    structure updates:
+    \BI a continuous update constrains the values of $p$
         to be within a continous, bounded range; on the other hand,
-    \I  the discrete parameterization constrains the values of $z$ 
+    \I  a discrete update constrains the values of $p$ 
         within a finite set of allowable values. \EI
 
 \section{Structure of the module}
@@ -263,17 +280,18 @@ The interaction between these two submodules is illustrated in \fig{strategy}.
 
     % Parameterization
     \psframe(-.8,0.8)(.8,-0.4) 
-    \rput[t](0,-0.6){\parbox{3cm}{\center structure\\ parameterization}}
+    % \rput[t](0,-0.6){\parbox{3cm}{\center structure\\ update}}
+    \rput[t](0,-0.6){structure update}
 
     % Arrows
-    \rput[r](-4.3,3){$z_\text{guess}$}
+    \rput[r](-4.3,3){$z_\text{init}$}
     \psline{->}(-4,3)(-2.4,3)
 
     \rput[r](-1.9,0.8){$Q(z)$}
     \psline(-1.6,1.8)(-1.6,0.2)
     \psline{->}(-1.6,0.2)(-1,0.2)
 
-    \rput[l](1.9,0.8){$\text{argmin}\, Q(z) + g(z)$}
+    \rput[l](1.9,0.8){$\argmin Q(z) + g(z)$}
     \psline(1.6,0.2)(1,0.2)
     \psline{<-}(1.6,1.8)(1.6,0.2)
 
@@ -283,10 +301,10 @@ The interaction between these two submodules is illustrated in \fig{strategy}.
 \end{pspicture}
 \caption{Basic layout of the module.
         The optimization paradigm submodule
-            accepts an initial structure $z_\text{guess}$
+            accepts an initial structure $z_\text{init}$
             and returns a final, optimized structure $z_\text{final}$.
         This is accomplished by repeatedly passing quadratic functions $Q(z)$ 
-            to the structure parameterization module,
+            to the structure update submodule,
             which returns an updated structure $z$
             which minimizes $Q(z) + g(z)$.}
 \label{fig:strategy}
@@ -452,6 +470,38 @@ Finally, the expression for $\Delta x_i$ is obtained as
         
     
 \section{The structure submodule}
+\subsection{The continuous structure update}
+A continuous structure update scheme solves
+    \E  {structure submodule primary equation}
+        {\argmin Q(z) + g(z)}
+    by limiting the allowable values of $p$
+    in \eq{structure design objective definition} to a continuous range
+    of real values.
+
+If both $m(p)$ and $w(p)$ are linear, 
+    then \eq{structure submodule primary equation} is convex
+    and can be solved using CVX.
+
+On the other hand, if this is not the case, 
+    then \eq{structure submodule primary equation}
+    is solved using a gradient-descent method.
+
+
+\subsection{The discrete structure update}
+A discrete structure update scheme solves 
+    \eq{structure submodule primary equation}
+    while limiting the range of $p$ to a finite set of discrete values.
+
+In the special case where both $m(p)$ and $w(p)$, as well as $Q(z)$
+    are all linear and diagonal,
+    then \eq{structure submodule primary equation} may be solved trivially.
+Naturally, this is a very unique case and requires some amount 
+    of care to set up on the user's part.
+
+In general, \eq{structure submodule primary equation} is solved 
+    using a greedy algorithm where the most beneficial change
+    in a single element of $p$ is taken until no beneficial steps remain.
+
 
 
 \begin{thebibliography}{99}
