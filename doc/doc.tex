@@ -100,9 +100,9 @@ As previously stated, the problem we want to solve is
         \subto&     A_i(z)x_i - b_i(z) = 0,\quad\text{for $i = 1, \ldots, N.$}}
 To now be more precise,
     \BI $x_i \in \comps^m$ are the field variables,
-    \I  $z \in \reals^n$ is the structure variable,
+    \I  $z \in \comps^n$ is the structure variable,
     \I  $f_i(x_i) \in \comps^m \to \reals$ are the field design objectives,
-    \I  $g(z) \in \reals^n \to \reals$ is the structure design objective,
+    \I  $g(z) \in \comps^n \to \reals$ is the structure design objective,
     \I  $A_i(z)x_i - b_i(z)$ are the physics residuals, with
     \I  $A_i(z) \in \comps^{n \times n}$ and
     \I  $b_i(z) \in \comps^n$. \EI
@@ -148,8 +148,9 @@ Such a design objective implements the constraints
 
 \section{Choice of the structure design objective}
 The form of the structure design objective consists of two parts,
-    \BI a structure parameterization function $m(p)$, and 
-    \I  a parameter weighting function $w(p)$. \EI
+    \BI a structure parameterization function 
+        $m(p) \in \reals^l \to \comps^n$, and 
+    \I  a parameter weighting function $w(p)\in \reals^l \to \reals$. \EI
 Both use the variable $p$ which allows us 
     to cast $z$ into arbitrary parameters of our choice.
 Together, the general form of the structure design objective is
