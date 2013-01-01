@@ -28,9 +28,18 @@
 
     epsilon = add_planar(epsilon, z_center, z_thickness, my_shapes); 
 
-    [S, epsilon] = planar_selection_matrix('serrated', epsilon, ...
-                                            {[21 21], [60 60]}, ...
+    [S, epsilon] = planar_selection_matrix('alternate', epsilon, ...
+                                            {[21 21], [41 41]}, 1.5, ...
                                             z_center, z_thickness);
+
+   for j = 1 : dims(3)
+       for k = 1 : 3
+           subplot(1, 3, k);
+           imagesc(epsilon{k}(:,:,j)'); axis equal tight;
+           title(num2str(j));
+       end
+       pause(0.1)
+    end
 
 
     %% Specify modes
