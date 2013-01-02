@@ -2,7 +2,7 @@
 
     %% Hard-coded constants.
     omega = 0.12;
-    dims = [80 80 40];
+    dims = [80 80 1];
     z_thickness = 10;
     z_center = dims(3)/2;
     eps_lo = 1.5;
@@ -31,7 +31,7 @@
 
     % Build the selection matrix, and reset values of epsilon.
     [S, epsilon] = planar_selection_matrix('alternate', epsilon, ...
-                                            {[21 21], [41 41]}, eps_lo, ...
+                                            {[21 21], [60 60]}, eps_lo, ...
                                             z_center, z_thickness);
 
 
@@ -48,7 +48,7 @@
     wg = @(power, xpos, dir, mode_num) ...
                 struct('type', 'wgmode', ...
                     'power', power, ...
-                    'pos', {[xpos 1 1], [xpos dims(2) dims(3)]}, ...
+                    'pos', {{[xpos 1 1], [xpos dims(2) dims(3)]}}, ...
                     'dir', dir, ...
                     'mode_num', mode_num);
 
@@ -63,4 +63,4 @@
                     'S', (eps_hi - eps_lo) * S);
 
     %% Construct the optimization problem
-    opt_prob = make_opt_prob(z_param, modes)
+    opt_prob = translation_layer(z_param, modes, @solve_local);
