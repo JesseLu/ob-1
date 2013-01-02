@@ -31,7 +31,7 @@ function [S, epsilon] = planar_selection_matrix(type, epsilon, sel, ...
                                     wxy_ind);
 
     a = pos2ind(pxy{1}, pxy{2}, pxy{3}, 1);
-    a
+    size(a)
 
 
 
