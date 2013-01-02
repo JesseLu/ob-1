@@ -168,17 +168,17 @@ function [beta, E, H, J] = solve_waveguide_mode(...
         end
     end
 
-    % Plot fields.
-    f = {E{:}, H{:}};
-    title_text = {'Ex', 'Ey', 'Ez', 'Hx', 'Hy', 'Hz'};
-    for k = 1 : 6
-        subplot(2, 3, k);
-        my_plot(reshape(real(f{k}), shape));
-        title(title_text{k});
-    end
-    
-    % Print out the errors.
-    fprintf('Error: %e (H-field), %e (E-field).\n', H_err, E_err);
+%     % Plot fields.
+%     f = {E{:}, H{:}};
+%     title_text = {'Ex', 'Ey', 'Ez', 'Hx', 'Hy', 'Hz'};
+%     for k = 1 : 6
+%         subplot(2, 3, k);
+%         my_plot(reshape(real(f{k}), shape));
+%         title(title_text{k});
+%     end
+%     
+%     % Print out the errors.
+%     fprintf('Error: %e (H-field), %e (E-field).\n', H_err, E_err);
 
 
 end % End of solve_waveguide_mode function
