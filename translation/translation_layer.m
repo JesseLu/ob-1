@@ -55,7 +55,7 @@ function [opt_prob] = translation_layer(modes, solver)
         xt = randn(n, 1) + 1i * randn(n, 1);
         pr1 = phys_res.A(zt) * xt - phys_res.b(zt);
         pr2 = phys_res.B(xt) * zt - phys_res.d(xt);
-        norm(pr1 - pr2)
+        norm(pr1 - pr2);
 
         %% Compute the output excitations.
         for j = 1 : length(m.out)
@@ -75,7 +75,7 @@ function [opt_prob] = translation_layer(modes, solver)
         %% Create function handles for solving A
         solve_A = @(z, b) solver(m.omega, m.s_prim, m.s_dual, m.mu, ...
                                 unvec(vec(m.epsilon_const) + m.S * z, dims), ...
-                                unvec(b./(i*m.omega), dims));
+                                unvec(b./(-i*m.omega), dims));
         % solve_A_dagger = @(z, b) get_callback(phys_res.A(z)' \ b);
 
         % Test solve.

@@ -29,6 +29,23 @@ Ob-1 is divided into four modules:
     Given an optimization problem, attempts to produce an optimal design for it.
 
 
+Application ideas
+-----------------
+
+*   Solar cell: normal incidence plane wave on to a lossy membrane (Si) with mirror.
+    Objective would be no reflection.
+*   CCD camera cell: normal incidence plane wave at red, green, and blue.
+    The underlying structure would be three point-like detectors.
+    Objective would be appropriate field amplitude at each detector.
+*   Lens
+*   Nanophotonic interconnect
+*   LED: active qw layer that must radiate surface normal. 
+    Would need to try lots of positions.
+*   Photonic crystal laser: central point source that must radiate into the normal
+    direction, with Gaussian profile, and high build-up.
+    Alternatively, can input Gaussian, and output amplified Gaussian,
+    with only a small amplifying volume at the center.
+
 Example usage
 -------------
 
