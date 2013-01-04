@@ -63,5 +63,30 @@
                     'epsilon_const', {epsilon}, ...
                     'S', (eps_hi - eps_lo) * S);
 
+
     %% Construct the optimization problem
     opt_prob = translation_layer(modes, @solve_local);
+
+%     % Test opt_prob.
+%     n = size(S, 1);
+%     l = size(S, 2);
+%     x = randn(n, 1) + 1i * randn(n, 1);
+%     z = randn(l, 1) + 1i * randn(l, 1);
+% 
+%     for i = 1 : length(opt_prob)
+%         pr = opt_prob(i).phys_res;
+%         phys_res_error(i) = norm(pr.A(z)*x-pr.b(z) - (pr.B(x)*z-pr.d(x)));  
+% 
+%         cb1 = opt_prob(i).solve_A(z, x);
+%         cb2 = opt_prob(i).solve_A_dagger(z, x);
+%         done = [false false];
+%         while ~all(done)
+%             [~, done(1)] = cb1();
+%             [~, done(2)] = cb2();
+%         end
+%         solve_A_error(i) = norm(pr.A(z) * cb1() - x);
+%         solve_A_dagger_error(i) = norm(pr.A(z)' * cb2() - x);
+%         fprintf('pr: %e, sA: %e, sAd: %e\n', phys_res_error(i), ...
+%                                 solve_A_error(i), solve_A_dagger_error(i));
+%     end
+

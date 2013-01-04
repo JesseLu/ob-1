@@ -35,11 +35,9 @@ function [beta, E, H, J] = solve_waveguide_mode(omega, s_prim, s_dual, ...
 
 %% Output parameters
 % * |beta| is the wavevector of the mode.
-% * |E| and |H| are the E- and H-fields of the mode. 
-%   Note that the size of each component array is matched to the bounded
-%   plane specified by the |pos| input parameter.
+% * |E| and |H| are the E- and H-fields of the mode, and
 % * |J| is the current excitation needed for the mode.
-%   Unlike |E| and |H|, |J| spans the entire simulation space and includes
+%   All three parameters span the entire simulation space and |J| includes
 %   a plan in-front of the bounded plane in order to enable a unidirectional
 %   source.
 
