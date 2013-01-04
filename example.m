@@ -1,5 +1,6 @@
     path(path, genpath('.'));
 
+
     %% Hard-coded constants.
     omega = 0.12;
     dims = [80 80 1];
@@ -7,7 +8,6 @@
     z_center = dims(3)/2;
     eps_lo = 1.5;
     eps_hi = 13;
-
 
 
     %% Build up the base structure.
@@ -35,11 +35,12 @@
                                             z_center, z_thickness);
 
 
-    %% Specify the parameterization of z
-    z_param = struct('m', @(p) p, ...
-                    'w', @(p) 0, ...
-                    'p_range', ones(size(S,2), 1) * [0 1], ...
-                    'scheme', 'discrete-diagonal');
+    %% Specify structure design objective 
+    % Otherwise known as the parameterization of z.
+    struct_obj = struct('m', @(p) p, ...
+                        'w', @(p) 0, ...
+                        'p_range', ones(size(S,2), 1) * [0 1], ...
+                        'scheme', 'discrete-diagonal');
 
 
     %% Specify modes
@@ -54,8 +55,8 @@
 
     modes(1) = struct('omega', omega, ...
                     'in', wg(1, 15, 'x+', 1), ...
-                    'out', [wg([0.9 1], 65, 'x', 1), ...
-                            wg([0 0.1], 65, 'x', 2)], ...
+                    'out', [wg([0.9 1], 65, 'x+', 1), ...
+                            wg([0 0.1], 15, 'x-', 2)], ...
                     's_prim', {s_prim}, ...
                     's_dual', {s_dual}, ...
                     'mu', {mu}, ...
@@ -63,4 +64,4 @@
                     'S', (eps_hi - eps_lo) * S);
 
     %% Construct the optimization problem
-    opt_prob = translation_layer(z_param, modes, @solve_local);
+    opt_prob = translation_layer(modes, @solve_local);

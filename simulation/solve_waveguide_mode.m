@@ -4,11 +4,14 @@
 %% Description
 % Computes the propagation mode for a nanophotonic waveguide structure
 % including the wave-vector, E- and H-fields, as well as the current excitation
-% needed for omni- or uni-directional excitation.
+% needed for uni-directional excitation.
+%
+% Theoretically, the excited wave should be of power 1.
+% In practice, there is some error, although this is almost always less than 1%.
 
-function [beta, E, H, J] = solve_waveguide_mode(...
-                                        omega, s_prim, s_dual, mu, epsilon, ...
-                                        pos, dir, mode_num)
+function [beta, E, H, J] = solve_waveguide_mode(omega, s_prim, s_dual, ...
+                                                mu, epsilon, ...
+                                                pos, dir, mode_num)
 
 %% Input parameters
 % The input parameters are very similar to those which describe a simulation,
@@ -25,10 +28,8 @@ function [beta, E, H, J] = solve_waveguide_mode(...
 %   Specifically, |pos| should look like |{[x0 y0 z0], [x1 y1 z1]}|.
 %   Note that if propagation in the x-direction is desired, then |x0| should
 %   equal |x1|.
-% * |dir| is a string denoting the diretion of propagation for the waveguide.
-%   Possible values include |'x'|, |'y'|, and |'z'| which denote propagation
-%   in both the positive and negative directions as well as unidirectional 
-%   excitation directions |'x+'|, |'x-'|, |'y+'|, |'y-'|, |'z+'|, and |'z-'|.
+% * |dir| is a string denoting the direction of propagation for the waveguide.
+%   Possible values include |'x+'|, |'x-'|, |'y+'|, |'y-'|, |'z+'|, and |'z-'|.
 % * |mode_num| is the order of the mode to compute where |1| denotes the
 %   fundamental mode, |2| denotes the second order mode and so on.
 
@@ -58,8 +59,8 @@ function [beta, E, H, J] = solve_waveguide_mode(...
     end
 
     % Figure out what direction we are to propagate in.
-    if all(dir(1) ~= 'xyz')
-        error('The propagation direction must be either x, y, or z.');  
+    if all(dir(1) ~= 'xyz') || all(dir(2) ~= '+-')
+        error('The propagation direction must be either x+, x-, y+, y-, z+, or z-.');
     end
     prop_dir = find(dir(1) == 'xyz');
 
@@ -101,6 +102,7 @@ function [beta, E, H, J] = solve_waveguide_mode(...
     % Shift the matrix and find the appropriate eigenmode.
     % Find a few extra modes just to be sure we found the correct one.
     [V, D] = eigs(A_r - shift * speye(n), mode_num + 2); 
+
     
     gamma = diag(D);
     [temp, ind] = sort(gamma); % Sort most negative first.
@@ -126,49 +128,66 @@ function [beta, E, H, J] = solve_waveguide_mode(...
 
     %% Calculate output parameters
 
-    % Wave-vector.
+    % Compute the wave-vector.
     beta = i * sqrt(lambda);
     beta = sign(real(beta)) * beta; % Force real part of beta to be positive.
 
-    % Fields.
-    [E, H, J_small, E_err, H_err] = get_wg_fields(beta, v);
+    % Perform correction on beta to account for numerical dispersion.
+    % Inspiration: Taflove's FDTD book, under Numerical Dispersion.
+    % This correction term brings the error in emitted power to within +/- 1%.
+    % At the same time, additional error is introduced into the E_err and H_err terms.
+    % This effect becomes more pronounced as beta increases.
+    beta_corr = 2*sin(real(beta/2)) - real(beta);
+    beta = beta + beta_corr;
 
-    % Expand the J-field to span the entire simulation space.
+    % Fields.
+    [E_small, H_small, J_small, E_err, H_err] = get_wg_fields(beta, v);
+
+    % Expand the fields to span the entire simulation space.
     orig_dims = size(epsilon{1});
     for k = 1 : 3
+        E{k} = zeros(orig_dims);
+        H{k} = zeros(orig_dims);
         J{k} = zeros(orig_dims);
+
+        E{k}(p0(1):p1(1), p0(2):p1(2), p0(3):p1(3)) = E_small{k};
+        H{k}(p0(1):p1(1), p0(2):p1(2), p0(3):p1(3)) = H_small{k};
         J{k}(p0(1):p1(1), p0(2):p1(2), p0(3):p1(3)) = J_small{k};
     end
 
-    % If needed, make the source uni-directional.
+    %% Make the source uni-directional
     % This is done by creating an adjacent source which cancels the propagation
     % of the mode in one direction.
-    if length(dir) == 2
-        dl = real(sp{prop_dir}); % Distance separating J and J_adj planes.
 
-        if dir(2) == '+'
-            coeff = 1;
-        elseif dir(2) == '-'
-            coeff = -1;
-        else
-            error('Directionality must be either + or -.');
-        end
+    dl = real(sp{prop_dir}); % Distance separating J and J_adj planes.
 
-        % Shift indices for the propagation direction.
-        ps0 = p0;
-        ps1 = p1;
-        ps0(prop_dir) = p0(prop_dir) + 1;
-        ps1(prop_dir) = p1(prop_dir) + 1;
-
-        % Form the adjacent J-field. 
-        for k = 1 : 3  
-            J{k}(ps0(1):ps1(1), ps0(2):ps1(2), ps0(3):ps1(3)) = ...
-                -1 * J{k}(p0(1):p1(1), p0(2):p1(2), p0(3):p1(3)) * ...
-                exp(coeff * i * beta * dl);
-        end
+    if dir(2) == '+'
+        coeff = 1;
+    elseif dir(2) == '-'
+        coeff = -1;
+    else
+        error('Directionality must be either + or -.');
     end
 
-%     % Plot fields.
+    % Shift indices for the propagation direction.
+    ps0 = p0;
+    ps1 = p1;
+    ps0(prop_dir) = p0(prop_dir) + 1;
+    ps1(prop_dir) = p1(prop_dir) + 1;
+
+    % Form the adjacent J-field. 
+    for k = 1 : 3  
+        J{k}(ps0(1):ps1(1), ps0(2):ps1(2), ps0(3):ps1(3)) = ...
+            -1 * J{k}(p0(1):p1(1), p0(2):p1(2), p0(3):p1(3)) * ...
+            exp(coeff * i * beta * dl);
+    end
+
+    % Re-normalize so power flow is maintained at 1.
+    for k = 1 : 3
+        J{k} = J{k} ./ abs(1 - exp(coeff * 2i * beta * dl));
+    end
+
+%     %% Plot fields
 %     f = {E{:}, H{:}};
 %     title_text = {'Ex', 'Ey', 'Ez', 'Hx', 'Hy', 'Hz'};
 %     for k = 1 : 6
@@ -176,6 +195,10 @@ function [beta, E, H, J] = solve_waveguide_mode(...
 %         my_plot(reshape(real(f{k}), shape));
 %         title(title_text{k});
 %     end
+% %     % Can be used for lower dimension cases.
+% %     subplot 121; plot(real([f{1}, f{2}, f{3}, f{4}, f{5}, f{6}]), '.-');
+% %     subplot 122; plot(imag([f{1}, f{2}, f{3}, f{4}, f{5}, f{6}]), '.-');
+% %     legend(title_text);
 %     
 %     % Print out the errors.
 %     fprintf('Error: %e (H-field), %e (E-field).\n', H_err, E_err);
@@ -258,12 +281,52 @@ function [A, get_wg_fields] = wg_operator(omega, s_prim, s_dual, epsilon, mu, ..
     vec2field = @(z) reorder(to_field(z));
 
     % Secondary operator that returns ordered fields.
+    % The fields are also normalized so that the E- and H-fields are those
+    % which give a Poynting vector of 1.
+    % Also, subsequent solves should give the fields with the same phase
+    % factor.
+    % Lastly, J should be normalized to produce waveguide modes of power
+    % 1 in both directions.
     function [E, H, J, E_err, H_err] = wg_fields(beta, v)
-        E = vec2field(v2e(beta, v));
-        H = vec2field(v2h(beta, v));
-        J = vec2field(v2j(v));
-        E_err = e_err(beta, v2e(beta, v));
-        H_err = h_err(beta, v2h(beta, v));
+        % Obtain E- and H-fields (still in vector form).
+        e = v2e(beta, v);
+        h = v2h(beta, v);
+
+        % Compute a normalization factor for power of 1.
+        % Also ensure that subsequent solves yield waveguide modes of the same phase.
+
+        % This calculates the total power of the mode as is,
+        % and then uses the inverse root as the amplitude of the normalization factor.
+        norm_amplitude = abs(...
+                dot(real(s_prim_x(:)).*real(s_dual_y(:)).*e(1:n), h(n+1:2*n)) + ...
+                dot(real(s_prim_y(:)).*real(s_dual_x(:)).*-e(n+1:2*n), h(1:n)))^-0.5;
+
+        % Use the element of the E-field with largest magnitude as a phase reference.
+        [~, ind] = max(abs(e));
+        norm_angle = -angle(e(ind));
+
+        % The combined normalization factor.
+        norm_factor = norm_amplitude * exp(i * norm_angle);
+
+        % Apply the normalization factor so that the fields produce 
+        % Poynting vector of 1.
+        e = norm_factor * e;
+        h = norm_factor * h;
+        v = norm_factor * v;
+
+        % Fields in vector-field form.
+        E = vec2field(e);
+        H = vec2field(h);
+
+        % Normalization factor for current excitation (some special sauce!).
+        nf_j = 2 * cos(beta/2) ;
+        J = vec2field(nf_j * v2j(v));
+
+        % Error in waveguide mode equation.
+        % Note that this may increase because of the correction to the beta term,
+        % especially for larger values of beta.
+        E_err = e_err(beta, e);
+        H_err = h_err(beta, h);
     end
 
     get_wg_fields = @wg_fields; % Function handle to get all the important info.
@@ -296,6 +359,7 @@ function [D] = deriv(dir, shape)
 end % End of deriv private function.
 
 function my_plot(x)
+% Helps with plotting.
     imagesc(squeeze(x).', (max(abs(x(:))) + eps) * [-1 1]);
     colorbar 
     axis equal tight;
