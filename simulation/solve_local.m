@@ -22,7 +22,7 @@ function [callback] = solve_local(omega, s_prim, s_dual, mu, epsilon, J)
     x = A \ b;
 
     % Get the H-field.
-    y = my_diag(1./(i*omega*m)) * A2 * x;
+    y = my_diag(1./(-i*omega*m)) * A2 * x;
 
     % Reshape solution.
     for k = 1 : 3
