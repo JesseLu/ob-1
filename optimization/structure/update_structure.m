@@ -45,6 +45,10 @@ function [z] = update_structure(P, q, g)
                     p <= g.p_range(:,2)
                     p >= g.p_range(:,1)
             cvx_end
+
+            % Test
+            real(A'*(A * p - b))
+            p
             z = g.m(p);
         case 'discrete'
         case 'discrete-diagonal'
