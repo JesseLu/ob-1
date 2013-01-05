@@ -28,7 +28,7 @@ function [z] = update_structure(P, q, g)
 
             % Linearization of m(p).
             A_m = get_gradient(g.m, p0);
-            b_m = g.m(p0);
+            b_m = -g.m(p0);
 
             % Linearization of w(p).
             c_w = get_gradient(g.w, p0)';
@@ -48,6 +48,7 @@ function [z] = update_structure(P, q, g)
 
             % Test
             real(A'*(A * p - b))
+            get_gradient(@(p) 1/2*norm(P*(g.m(p)) - q)^2 + g.w(p), p)'
             p
             z = g.m(p);
         case 'discrete'
