@@ -19,7 +19,7 @@ function [z] = update_structure(P, q, g)
         %
         % We transform $Q(z) + g(z)$ into p-space via
         % $$ 1/2\|P(A_m p - b_m)-q\|^2 + \mbox{real}(c_w^\dagger p) = 
-        %    1/2\|P A_m p - (q + b_m + (P A_m)^{-\dagger} c_w)\|^2, $$
+        %    1/2\|P A_m p - (q + P b_m - (P A_m)^{-\dagger} c_w)\|^2, $$
         % where we have used the linearizations of m(p) and w(p).
         case 'continuous-linear'
             path(path, genpath(strrep(mfilename('fullpath'), ...
@@ -35,7 +35,7 @@ function [z] = update_structure(P, q, g)
 
             % Transform into p-space.
             A = P * A_m;
-            b = q + b_m + (A' \ c_w);
+            b = q + P * b_m - (A' \ c_w);
 
             cvx_quiet(true)
             cvx_begin

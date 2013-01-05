@@ -1,0 +1,174 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>update_structure</title><meta name="generator" content="MATLAB 8.0"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2013-01-04"><meta name="DC.source" content="update_structure.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, tt, code { font-size:12px; }
+pre { margin:0px 0px 20px; }
+pre.error { color:red; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>update_structure</h1><!--introduction--><p>Updates z by solving argmin Q(z) + g(z).</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Description</a></li><li><a href="#3">Continuous-linear case</a></li></ul></div><h2>Description<a name="1"></a></h2><p>Q(z) is described by matrix P and vector q, via Q(z) = 1/2  Pz - q ^2.</p><p>Typically, the optimal value for z is found by solving the problem in terms of its parameterization variable p. For this reason, the problem is typically converted into "p-space".</p><pre class="codeinput"><span class="keyword">function</span> [z] = update_structure(P, q, g)
+
+
+
+    <span class="keyword">switch</span>(g.scheme)
+        <span class="keyword">case</span> <span class="string">'continuous'</span>
+</pre><h2>Continuous-linear case<a name="3"></a></h2><p>We transform <img src="update_structure_eq46667.png" alt="$Q(z) + g(z)$"> into p-space via <img src="update_structure_eq11752.png" alt="$$ 1/2\|P(A_m p - b_m)-q\|^2 + \mbox{real}(c_w^\dagger p) =    1/2\|P A_m p - (q + P b_m + (P A_m)^{-\dagger} c_w)\|^2, $$"> where we have used the linearizations of m(p) and w(p).</p><pre class="codeinput">        <span class="keyword">case</span> <span class="string">'continuous-linear'</span>
+            path(path, genpath(strrep(mfilename(<span class="string">'fullpath'</span>), <span class="keyword">...</span>
+                                            <span class="string">'update_structure'</span>, <span class="string">'cvx'</span>)));
+            p0 = g.p_range(:,1);
+
+            <span class="comment">% Linearization of m(p).</span>
+            A_m = get_gradient(g.m, p0);
+            b_m = -g.m(p0);
+
+            <span class="comment">% Linearization of w(p).</span>
+            c_w = get_gradient(g.w, p0)';
+
+            <span class="comment">% Transform into p-space.</span>
+            A = P * A_m;
+            b = q + P * b_m + (A' \ c_w);
+
+            cvx_quiet(true)
+            cvx_begin
+                variable <span class="string">p(length(p0))</span>
+                minimize <span class="string">norm(A*p - b)</span>
+                subject <span class="string">to</span>
+                    p &lt;= g.p_range(:,2)
+                    p &gt;= g.p_range(:,1)
+            cvx_end
+
+            <span class="comment">% Test</span>
+            real(A'*(A * p - b))
+            get_gradient(@(p) 1/2*norm(P*(g.m(p)) - q)^2 + g.w(p), p)'
+            p
+            z = g.m(p);
+        <span class="keyword">case</span> <span class="string">'discrete'</span>
+        <span class="keyword">case</span> <span class="string">'discrete-diagonal'</span>
+        <span class="keyword">otherwise</span>
+            error(<span class="string">'Invalid scheme for structure design objective.'</span>);
+    <span class="keyword">end</span>
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2012b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% update_structure
+% Updates z by solving argmin Q(z) + g(z).
+
+%% Description
+% Q(z) is described by matrix P and vector q, via Q(z) = 1/2 || Pz - q ||^2.
+%
+% Typically, the optimal value for z is found by solving the problem in terms
+% of its parameterization variable p.
+% For this reason, the problem is typically converted into "p-space".
+
+function [z] = update_structure(P, q, g)
+    
+
+
+    switch(g.scheme)
+        case 'continuous'
+
+        %% Continuous-linear case
+        %
+        % We transform $Q(z) + g(z)$ into p-space via
+        % $$ 1/2\|P(A_m p - b_m)-q\|^2 + \mbox{real}(c_w^\dagger p) = 
+        %    1/2\|P A_m p - (q + P b_m + (P A_m)^{-\dagger} c_w)\|^2, $$
+        % where we have used the linearizations of m(p) and w(p).
+        case 'continuous-linear'
+            path(path, genpath(strrep(mfilename('fullpath'), ...
+                                            'update_structure', 'cvx')));
+            p0 = g.p_range(:,1);
+
+            % Linearization of m(p).
+            A_m = get_gradient(g.m, p0);
+            b_m = -g.m(p0);
+
+            % Linearization of w(p).
+            c_w = get_gradient(g.w, p0)';
+
+            % Transform into p-space.
+            A = P * A_m;
+            b = q + P * b_m + (A' \ c_w);
+
+            cvx_quiet(true)
+            cvx_begin
+                variable p(length(p0))
+                minimize norm(A*p - b)
+                subject to
+                    p <= g.p_range(:,2)
+                    p >= g.p_range(:,1)
+            cvx_end
+
+            % Test
+            real(A'*(A * p - b))
+            get_gradient(@(p) 1/2*norm(P*(g.m(p)) - q)^2 + g.w(p), p)'
+            p
+            z = g.m(p);
+        case 'discrete'
+        case 'discrete-diagonal'
+        otherwise
+            error('Invalid scheme for structure design objective.');
+    end
+
+       
+    
+
+##### SOURCE END #####
+--></body></html>
