@@ -6,7 +6,7 @@
    <!--
 This HTML was auto-generated from MATLAB code.
 To make changes, update the MATLAB code and republish this document.
-      --><title>update_structure</title><meta name="generator" content="MATLAB 8.0"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2013-01-04"><meta name="DC.source" content="update_structure.m"><style type="text/css">
+      --><title>update_structure</title><meta name="generator" content="MATLAB 8.0"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2013-01-07"><meta name="DC.source" content="update_structure.m"><style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
 
 html { min-height:100%; margin-bottom:1px; }
@@ -65,47 +65,121 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 
 
 
-  </style></head><body><div class="content"><h1>update_structure</h1><!--introduction--><p>Updates z by solving argmin Q(z) + g(z).</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Description</a></li><li><a href="#3">Continuous-linear case</a></li></ul></div><h2>Description<a name="1"></a></h2><p>Q(z) is described by matrix P and vector q, via Q(z) = 1/2  Pz - q ^2.</p><p>Typically, the optimal value for z is found by solving the problem in terms of its parameterization variable p. For this reason, the problem is typically converted into "p-space".</p><pre class="codeinput"><span class="keyword">function</span> [z] = update_structure(P, q, g)
-
+  </style></head><body><div class="content"><h1>update_structure</h1><!--introduction--><p>Updates z by solving argmin Q(z) + g(z).</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Description</a></li><li><a href="#2">Continuous case.</a></li><li><a href="#4">Continuous-linear case</a></li><li><a href="#7">Discrete case</a></li><li><a href="#10">Discrete-diagonal case</a></li><li><a href="#13">Private parameterization function.</a></li></ul></div><h2>Description<a name="1"></a></h2><p>Q(z) is described by matrix P and vector q, via Q(z) = 1/2  Pz - q ^2.</p><p>Typically, the optimal value for z is found by solving the problem in terms of its parameterization variable p. For this reason, the problem is typically converted into "p-space".</p><pre class="codeinput"><span class="keyword">function</span> [z, p] = update_structure(P, q, g, p0)
 
 
     <span class="keyword">switch</span>(g.scheme)
-        <span class="keyword">case</span> <span class="string">'continuous'</span>
-</pre><h2>Continuous-linear case<a name="3"></a></h2><p>We transform <img src="update_structure_eq46667.png" alt="$Q(z) + g(z)$"> into p-space via <img src="update_structure_eq11752.png" alt="$$ 1/2\|P(A_m p - b_m)-q\|^2 + \mbox{real}(c_w^\dagger p) =    1/2\|P A_m p - (q + P b_m + (P A_m)^{-\dagger} c_w)\|^2, $$"> where we have used the linearizations of m(p) and w(p).</p><pre class="codeinput">        <span class="keyword">case</span> <span class="string">'continuous-linear'</span>
-            path(path, genpath(strrep(mfilename(<span class="string">'fullpath'</span>), <span class="keyword">...</span>
+</pre><h2>Continuous case.<a name="2"></a></h2><pre class="codeinput">        <span class="keyword">case</span> <span class="string">'continuous'</span>
+</pre><pre class="codeinput">            p = p0;
+
+            my_compressor = @(p) <span class="keyword">...</span>
+                (p &lt;= g.p_range(:,1)) .* g.p_range(:,1) + <span class="keyword">...</span>
+                (p &gt;= g.p_range(:,2)) .* g.p_range(:,2) + <span class="keyword">...</span>
+                ((p &gt; g.p_range(:,1)) &amp; p &lt; g.p_range(:,2)) .* p;
+            m = @(p) g.m(my_compressor(p));
+            w = @(p) g.w(my_compressor(p));
+
+            <span class="keyword">for</span> k = 1 : 10
+                <span class="comment">% Parameterize</span>
+                [A, b] = my_parameterize(P, q, g, p);
+                dp = A' * (A*p - b);
+                f = @(p) 1/2 * norm(P * m(p) - q) + w(p);
+                delta_p = line_search_convex(f, grad, dp, p, err_thresh)
+            <span class="keyword">end</span>
+</pre><h2>Continuous-linear case<a name="4"></a></h2><pre class="codeinput">        <span class="keyword">case</span> <span class="string">'continuous-linear'</span>
+</pre><pre class="codeinput">            path(path, genpath(strrep(mfilename(<span class="string">'fullpath'</span>), <span class="keyword">...</span>
                                             <span class="string">'update_structure'</span>, <span class="string">'cvx'</span>)));
-            p0 = g.p_range(:,1);
+            <span class="comment">% Parameterize</span>
+            [A, b] = my_parameterize(P, q, g, p0);
 
-            <span class="comment">% Linearization of m(p).</span>
-            A_m = get_gradient(g.m, p0);
-            b_m = -g.m(p0);
-
-            <span class="comment">% Linearization of w(p).</span>
-            c_w = get_gradient(g.w, p0)';
-
-            <span class="comment">% Transform into p-space.</span>
-            A = P * A_m;
-            b = q + P * b_m + (A' \ c_w);
-
+            <span class="comment">% Solve for p.</span>
             cvx_quiet(true)
             cvx_begin
-                variable <span class="string">p(length(p0))</span>
-                minimize <span class="string">norm(A*p - b)</span>
+                variable <span class="string">dp(length(p0))</span>
+                minimize <span class="string">norm(A*dp - b)</span>
                 subject <span class="string">to</span>
-                    p &lt;= g.p_range(:,2)
-                    p &gt;= g.p_range(:,1)
+                    p0 + dp &lt;= g.p_range(:,2)
+                    p0 + dp &gt;= g.p_range(:,1)
             cvx_end
 
-            <span class="comment">% Test</span>
-            real(A'*(A * p - b))
-            get_gradient(@(p) 1/2*norm(P*(g.m(p)) - q)^2 + g.w(p), p)'
-            p
+            p = p0 + dp;
             z = g.m(p);
-        <span class="keyword">case</span> <span class="string">'discrete'</span>
-        <span class="keyword">case</span> <span class="string">'discrete-diagonal'</span>
+
+<span class="comment">%             % Test</span>
+<span class="comment">%             real(A'*(A * dp - b))</span>
+<span class="comment">%             get_gradient(@(p) 1/2*norm(P*(g.m(p)) - q)^2 + g.w(p), p)'</span>
+</pre><h2>Discrete case<a name="7"></a></h2><pre class="codeinput">        <span class="keyword">case</span> <span class="string">'discrete'</span>
+</pre><pre class="codeinput">            <span class="keyword">while</span> true
+                <span class="comment">% Parameterize</span>
+                [A, b] = my_parameterize(P, q, g, p0);
+
+                <span class="comment">% Try all "one-off" combinations of p.</span>
+                <span class="keyword">for</span> k = 1 : length(p0)
+                    dp = zeros(size(p0));
+                    <span class="keyword">for</span> l = 1 : length(g.p_range(k, :))
+                        dp(k) = g.p_range(k, l) - p0(k);
+                        res(k, l) = 1/2 * norm(A * dp - b).^2;
+                    <span class="keyword">end</span>
+                <span class="keyword">end</span>
+
+                <span class="comment">% Find the optimal "one-off" change.</span>
+                [~, ind] = min(res(:));
+                [si, sj] = ind2sub(size(res), ind);
+                p = p0;
+                p(si) = g.p_range(si, sj);
+
+                <span class="comment">% Test for termination condition.</span>
+                <span class="keyword">if</span> norm(A*p - b) &lt; norm(A*p0- b)
+                    p0 = p;
+                <span class="keyword">else</span>
+                    <span class="keyword">break</span>
+                <span class="keyword">end</span>
+            <span class="keyword">end</span>
+            z = g.m(p);
+</pre><h2>Discrete-diagonal case<a name="10"></a></h2><pre class="codeinput">        <span class="keyword">case</span> <span class="string">'discrete-diagonal'</span>
+
+            <span class="comment">% Parameterize</span>
+            [A, b] = my_parameterize(P, q, g, p0);
+
+            <span class="comment">% Test if A is diagonal.</span>
+            A_diag = spdiags(spdiags(A, 0), 0, size(A,1), size(A,2));
+            <span class="keyword">if</span> ~all(A == A_diag)
+                warning(<span class="string">'Matrix is not diagonal.'</span>);
+            <span class="keyword">end</span>
+
+            <span class="comment">% Try all combinations of p.</span>
+            <span class="keyword">for</span> k = 1 : size(g.p_range, 2)
+                dp = g.p_range(:,k) - p0;
+                res(:,k) = 1/2 * abs(A * dp - b).^2;
+            <span class="keyword">end</span>
+
+            <span class="comment">% Find the optimal values of the residual.</span>
+            [~, ind] = min(res, [], 2);
+            <span class="keyword">for</span> k = 1 : length(ind)
+                p(k, 1) = g.p_range(k, ind(k));
+            <span class="keyword">end</span>
+            z = g.m(p);
+
+
         <span class="keyword">otherwise</span>
-            error(<span class="string">'Invalid scheme for structure design objective.'</span>);
+</pre><pre class="codeinput">            error(<span class="string">'Invalid scheme for structure design objective.'</span>);
     <span class="keyword">end</span>
+
+<span class="keyword">end</span> <span class="comment">% End update_structure function.</span>
+</pre><h2>Private parameterization function.<a name="13"></a></h2><p>We transform <img src="update_structure_eq46667.png" alt="$Q(z) + g(z)$"> into p-space via <img src="update_structure_eq01706.png" alt="$$ 1/2\|P(A_m \Delta p - b_m)-q\|^2 + \mbox{real}(c_w^\dagger \Delta p) =    1/2\|P A_m \Delta p - (q + P b_m - (P A_m)^{-\dagger} c_w)\|^2 +       \mbox{const.}, $$"> where we have used the linearizations <img src="update_structure_eq94431.png" alt="$m(p_0 + \Delta p) \approx A_m \Delta p - b_m$"> and <img src="update_structure_eq38972.png" alt="$w(p_0 + \Delta p) \approx c_w^\dagger \Delta p + \mbox{const.}$">.</p><pre class="codeinput"><span class="keyword">function</span> [A, b] = my_parameterize(P, q, g, p0)
+
+    <span class="comment">% Linearization of m(p).</span>
+    A_m = get_gradient(g.m, p0);
+    b_m = -g.m(p0);
+
+    <span class="comment">% Linearization of w(p).</span>
+    c_w = get_gradient(g.w, p0)';
+
+    <span class="comment">% Transform into p-space.</span>
+    A = P * A_m;
+    b = q + P * b_m - (A' \ c_w);
+
+<span class="keyword">end</span> <span class="comment">% End private function my_parameterize.</span>
 </pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2012b</a><br></p></div><!--
 ##### SOURCE BEGIN #####
 %% update_structure
@@ -118,56 +192,145 @@ table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px soli
 % of its parameterization variable p.
 % For this reason, the problem is typically converted into "p-space".
 
-function [z] = update_structure(P, q, g)
+function [z, p] = update_structure(P, q, g, p0)
     
 
-
     switch(g.scheme)
+        %% Continuous case.
+        
         case 'continuous'
+            p = p0;
+
+            my_compressor = @(p) ...
+                (p <= g.p_range(:,1)) .* g.p_range(:,1) + ...
+                (p >= g.p_range(:,2)) .* g.p_range(:,2) + ...
+                ((p > g.p_range(:,1)) & p < g.p_range(:,2)) .* p;
+            m = @(p) g.m(my_compressor(p));
+            w = @(p) g.w(my_compressor(p));
+
+            for k = 1 : 10
+                % Parameterize
+                [A, b] = my_parameterize(P, q, g, p);
+                dp = A' * (A*p - b);
+                f = @(p) 1/2 * norm(P * m(p) - q) + w(p);
+                delta_p = line_search_convex(f, grad, dp, p, err_thresh)
+            end
+
 
         %% Continuous-linear case
-        %
-        % We transform $Q(z) + g(z)$ into p-space via
-        % $$ 1/2\|P(A_m p - b_m)-q\|^2 + \mbox{real}(c_w^\dagger p) = 
-        %    1/2\|P A_m p - (q + P b_m + (P A_m)^{-\dagger} c_w)\|^2, $$
-        % where we have used the linearizations of m(p) and w(p).
+        
         case 'continuous-linear'
             path(path, genpath(strrep(mfilename('fullpath'), ...
                                             'update_structure', 'cvx')));
-            p0 = g.p_range(:,1);
+            % Parameterize
+            [A, b] = my_parameterize(P, q, g, p0);
 
-            % Linearization of m(p).
-            A_m = get_gradient(g.m, p0);
-            b_m = -g.m(p0);
-
-            % Linearization of w(p).
-            c_w = get_gradient(g.w, p0)';
-
-            % Transform into p-space.
-            A = P * A_m;
-            b = q + P * b_m + (A' \ c_w);
-
+            % Solve for p.
             cvx_quiet(true)
             cvx_begin
-                variable p(length(p0))
-                minimize norm(A*p - b)
+                variable dp(length(p0))
+                minimize norm(A*dp - b)
                 subject to
-                    p <= g.p_range(:,2)
-                    p >= g.p_range(:,1)
+                    p0 + dp <= g.p_range(:,2)
+                    p0 + dp >= g.p_range(:,1)
             cvx_end
 
-            % Test
-            real(A'*(A * p - b))
-            get_gradient(@(p) 1/2*norm(P*(g.m(p)) - q)^2 + g.w(p), p)'
-            p
+            p = p0 + dp;
             z = g.m(p);
+
+%             % Test
+%             real(A'*(A * dp - b))
+%             get_gradient(@(p) 1/2*norm(P*(g.m(p)) - q)^2 + g.w(p), p)'
+
+
+        %% Discrete case
+        
         case 'discrete'
+
+            while true
+                % Parameterize
+                [A, b] = my_parameterize(P, q, g, p0);
+
+                % Try all "one-off" combinations of p.
+                for k = 1 : length(p0)
+                    dp = zeros(size(p0));
+                    for l = 1 : length(g.p_range(k, :))
+                        dp(k) = g.p_range(k, l) - p0(k);
+                        res(k, l) = 1/2 * norm(A * dp - b).^2;
+                    end
+                end
+
+                % Find the optimal "one-off" change.
+                [~, ind] = min(res(:));
+                [si, sj] = ind2sub(size(res), ind);
+                p = p0;
+                p(si) = g.p_range(si, sj);
+
+                % Test for termination condition.
+                if norm(A*p - b) < norm(A*p0- b)
+                    p0 = p;
+                else
+                    break
+                end
+            end
+            z = g.m(p);
+
+        %% Discrete-diagonal case
         case 'discrete-diagonal'
+
+            % Parameterize
+            [A, b] = my_parameterize(P, q, g, p0);
+
+            % Test if A is diagonal.
+            A_diag = spdiags(spdiags(A, 0), 0, size(A,1), size(A,2));
+            if ~all(A == A_diag)
+                warning('Matrix is not diagonal.');
+            end
+
+            % Try all combinations of p.
+            for k = 1 : size(g.p_range, 2)
+                dp = g.p_range(:,k) - p0;
+                res(:,k) = 1/2 * abs(A * dp - b).^2;
+            end
+
+            % Find the optimal values of the residual.
+            [~, ind] = min(res, [], 2);
+            for k = 1 : length(ind)
+                p(k, 1) = g.p_range(k, ind(k));
+            end
+            z = g.m(p);
+
+        
         otherwise
             error('Invalid scheme for structure design objective.');
     end
 
-       
+end % End update_structure function.
+
+
+%% Private parameterization function.
+%
+% We transform $Q(z) + g(z)$ into p-space via
+% $$ 1/2\|P(A_m \Delta p - b_m)-q\|^2 + \mbox{real}(c_w^\dagger \Delta p) = 
+%    1/2\|P A_m \Delta p - (q + P b_m - (P A_m)^{-\dagger} c_w)\|^2 + 
+%       \mbox{const.}, $$
+% where we have used the linearizations 
+% $m(p_0 + \Delta p) \approx A_m \Delta p - b_m$ and 
+% $w(p_0 + \Delta p) \approx c_w^\dagger \Delta p + \mbox{const.}$.
+function [A, b] = my_parameterize(P, q, g, p0)
+
+    % Linearization of m(p).
+    A_m = get_gradient(g.m, p0);
+    b_m = -g.m(p0);
+
+    % Linearization of w(p).
+    c_w = get_gradient(g.w, p0)';
+
+    % Transform into p-space.
+    A = P * A_m;
+    b = q + P * b_m - (A' \ c_w);
+
+end % End private function my_parameterize.
     
 
 ##### SOURCE END #####
