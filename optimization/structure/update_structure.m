@@ -36,9 +36,9 @@ function [z, p] = update_structure(P, q, g, p0)
                 % Empirically find gradient.
                 dp = get_gradient(@(p) f_uncomp(p), p)';
 
-                % Plot error.
-                err(end+1) = norm(filter_grad(dp, p));
-                semilogy(err, '.-');
+%                 % Plot error.
+%                 err(end+1) = norm(filter_grad(dp, p));
+%                 semilogy(err, '.-');
 
                 % Perform line search
                 optim_step = line_search_brute(f, -dp, p, 1e-6);
@@ -92,50 +92,50 @@ function [z, p] = update_structure(P, q, g, p0)
         %% Discrete case
         case 'discrete'
 
+            f = @(p) 1/2 * norm(P * g.m(p) - q)^2 + g.w(p);
             while true
-                % Parameterize
-                [A, b] = my_parameterize(P, q, g, p0);
-
                 % Try all "one-off" combinations of p.
+                f_min = Inf;
                 for k = 1 : length(p0)
-                    dp = zeros(size(p0));
+                    p = p0;
                     for l = 1 : length(g.p_range(k, :))
-                        dp(k) = g.p_range(k, l) - p0(k);
-                        res(k, l) = 1/2 * norm(A * dp - b).^2;
+                        p(k) = g.p_range(k, l);
+                        f_curr = f(p);
+                        if f_curr < f_min
+                            f_min = f_curr;
+                            p_min = p;
+                        end
                     end
                 end
 
-                % Find the optimal "one-off" change.
-                [~, ind] = min(res(:));
-                [si, sj] = ind2sub(size(res), ind);
-                p = p0;
-                p(si) = g.p_range(si, sj);
-
                 % Test for termination condition.
-                if norm(A*p - b) < norm(A*p0- b)
-                    p0 = p;
+                if f(p_min) < f(p0)
+                    p0 = p_min;
                 else
                     break
                 end
             end
+            p = p_min;
             z = g.m(p);
 
         %% Discrete-diagonal case
         case 'discrete-diagonal'
+%             % Test if A is diagonal.
+%             [A, b] = my_parameterize(P, q, g, p0); % Parameterize
+%             A_diag = spdiags(spdiags(A, 0), 0, size(A,1), size(A,2));
+%             if ~all(A == A_diag)
+%                 warning('Matrix is not diagonal.');
+%             end
 
-            % Parameterize
-            [A, b] = my_parameterize(P, q, g, p0);
-
-            % Test if A is diagonal.
-            A_diag = spdiags(spdiags(A, 0), 0, size(A,1), size(A,2));
-            if ~all(A == A_diag)
-                warning('Matrix is not diagonal.');
-            end
+            % Function handle to extract the individual components
+            % of the structure design objective.
+            my_diag = @(u) spdiags(u(:), 0, numel(u), numel(u));
+            f = @(p) 1/2 * abs(P * g.m(p) - q).^2 + g.w(my_diag(p)).';
 
             % Try all combinations of p.
             for k = 1 : size(g.p_range, 2)
-                dp = g.p_range(:,k) - p0;
-                res(:,k) = 1/2 * abs(A * dp - b).^2;
+                p = g.p_range(:,k);
+                res(:,k) = f(p);
             end
 
             % Find the optimal values of the residual.
