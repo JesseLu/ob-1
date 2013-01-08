@@ -10,6 +10,16 @@
 
 function [z, p] = update_structure(P, q, g, p0)
     
+%% Input parameters
+% * |P| and |q| describe Q(z).
+% * |g| is the structure objective function.
+% * |p0| is the initial value of p to be used.
+
+%% Output parameters
+% * |z| is the updated structure.
+% * |p| is the parameterization of the updated structure.
+
+    %% Source code
 
     switch(g.scheme)
         %% Continuous case

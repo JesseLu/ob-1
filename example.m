@@ -3,7 +3,7 @@ function example()
 
 
     %% Hard-coded constants.
-    omega = 0.15;
+    omega = 0.12;
     dims = [80 80 1];
     z_thickness = 10;
     z_center = dims(3)/2;
@@ -55,9 +55,9 @@ function example()
                     'mode_num', mode_num);
 
     modes(1) = struct('omega', omega, ...
-                    'in', wg(1, 15, 'x+', 3), ...
-                    'out', [wg([0.9 1], 68, 'x+', 3), ...
-                            wg([0 0.1], 12, 'x-', 3)], ...
+                    'in', wg(1, 15, 'x+', 1), ...
+                    'out', [wg([0.9 1], 68, 'x+', 1), ...
+                            wg([0 0.1], 12, 'x-', 1)], ...
                     's_prim', {s_prim}, ...
                     's_dual', {s_dual}, ...
                     'mu', {mu}, ...
@@ -74,16 +74,23 @@ function example()
     p0 = struct_obj.p_range(:,2);
     [z, p] = run_optimization(opt_prob, struct_obj, p0);
 
+    %% Verify
+    modes = verification_layer(opt_prob, z);
 
-    %% Visualize and test.
-    cb = solve_local(omega, s_prim, s_dual, mu, epsilon_0, J{1})
-    while ~cb()
-    end
-    [~, E] = cb();
-    subplot 121; imagesc(real(E{3})');
-    subplot 122; imagesc(real(E_out{1}{2}{3})');
-    (abs(dot(E{3}(:), E_out{1}{1}{3}(:))) / norm(E_out{1}{1}{3}(:))^2)^2
-    (abs(dot(E{3}(:), E_out{1}{2}{3}(:))) / norm(E_out{1}{2}{3}(:))^2)^2
+    modes(1).raw_output_mag
+    modes(1).output_power
+
+    subplot 121; imagesc(modes(1).epsilon{2}'); axis equal tight;
+    subplot 122; imagesc(abs(modes(1).E{3})'); axis equal tight;
+%     %% Visualize and test.
+%     cb = solve_local(omega, s_prim, s_dual, mu, epsilon_0, J{1})
+%     while ~cb()
+%     end
+%     [~, E] = cb();
+%     subplot 121; imagesc(real(E{3})');
+%     subplot 122; imagesc(real(E_out{1}{2}{3})');
+%     (abs(dot(E{3}(:), E_out{1}{1}{3}(:))) / norm(E_out{1}{1}{3}(:))^2)^2
+%     (abs(dot(E{3}(:), E_out{1}{2}{3}(:))) / norm(E_out{1}{2}{3}(:))^2)^2
 %     for k = 1 : 3
 %         subplot(1, 3, k);
 %         imagesc(abs(E{k})');
