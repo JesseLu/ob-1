@@ -19,13 +19,20 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     invAd = {opt_prob.solve_A_dagger};
 
     N = length(fobj); % Number of fields/modes.
-    n = length(z);
 
     % Determine the current state of the optimization.
     if isempty(state) % No previous state, use the default state.
-        % Default value for t, used in the relaxed field objective.
+
+        % Default value for x and u.
         for k = 1 : N
-            u_default{k} = zeros(n, 1);
+            mag = mean([fobj(k).alpha, fobj(k).beta], 2);
+            C = fobj(k).C;
+            x_default{k} = zeros(size(C,1), 1);
+            u_default{k} = zeros(size(C,1), 1);
+            for j = 1 : size(C, 2)
+                x_default{k} = x_default{k} + ...
+                                    mag(j) * C(:,j) ./ norm(C(:,j))^2;
+            end
         end
 
         state = struct( 't', 1e-3, ...
@@ -34,7 +41,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
                         'newton_max_steps', 100, ...
                         'line_search_err_thresh', 1e-9, ...
                         'vis_progress', @default_vis_progress, ...  
-                        'x', nan, ...
+                        'x', {x_default}, ...
                         'u', {u_default}, ...
                         'update_u', false);
     end
@@ -134,7 +141,8 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
                     -1/t * sum(ln(real(exp(-i*phi).*(C'*x)) - alpha) + ...
                                 ln(beta.^2 - abs(C'*x).^2));
         grad{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x); 
-        Hess{k} = @(x) rho * A' * A + 1/t * (C * diag(s{k}(x)) * C');
+        multHess{k} = @(x, v) rho * A' * (A * v) + ...
+                                1/t * (C * diag(s{k}(x)) * (C' * v));
 
 %         % Alternative function composition of gradient and Hessian using C tilde.
 %         grad{k} = @(x) rho * A' * (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
@@ -143,8 +151,8 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
 
         % Forms needed for efficient calculation of the Newton step.
         abridged_grad{k} = @(x) (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
-        M{k} = @(x) eye(n) - ...
-                    Ct{k} * inv((diag(rho*t./s{k}(x))) + Ct{k}'*Ct{k}) * Ct{k}';
+        multM{k} = @(x, v) v - ...
+                    Ct{k} * (inv((diag(rho*t./s{k}(x))) + Ct{k}'*Ct{k}) * (Ct{k}' * v));
 
 
     end
@@ -159,7 +167,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         % Initialize the computation for the Newton step.
         unfinished_modes = find(~mode_done);
         for k = unfinished_modes
-            cb{k} = invA{k}(z, -M{k}(x{k}) * abridged_grad{k}(x{k}));
+            cb{k} = invA{k}(z, -multM{k}(x{k}, abridged_grad{k}(x{k})));
         end
 
         % Complete the Newton step computation.
@@ -173,7 +181,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         % Perform an iteration of the Newton algorithm.
         for k = unfinished_modes
             % Check the computation of the Newton step.
-            newton_step_error = norm(Hess{k}(x{k}) * delta_x{k} + grad{k}(x{k}));
+            newton_step_error = norm(multHess{k}(x{k}, delta_x{k}) + grad{k}(x{k}));
 
             % Calculate the Newton decrement.
             lambda = sqrt(abs(real(grad{k}(x{k})' * -delta_x{k})));

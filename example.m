@@ -72,16 +72,19 @@ function example()
 
     %% Optimize
     p0 = struct_obj.p_range(:,2);
-    [z, p] = run_optimization(opt_prob, struct_obj, p0);
+    [z, p] = run_optimization(opt_prob, struct_obj, p0, 'local');
+    [z, p] = run_optimization(opt_prob, struct_obj, p0, 'global');
 
     %% Verify
     modes = verification_layer(opt_prob, z);
 
-    modes(1).raw_output_mag
-    modes(1).output_power
+    fprintf('     alpha    result      beta\n');
+    disp(modes(1).output_power)
 
+    % Visualize.
     subplot 121; imagesc(modes(1).epsilon{2}'); axis equal tight;
     subplot 122; imagesc(abs(modes(1).E{3})'); axis equal tight;
+
 %     %% Visualize and test.
 %     cb = solve_local(omega, s_prim, s_dual, mu, epsilon_0, J{1})
 %     while ~cb()
