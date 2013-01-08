@@ -5,7 +5,7 @@
 %% Description
 %
 
-function [opt_prob] = translation_layer(modes, solver)
+function [opt_prob, J, E_out] = translation_layer(modes, solver)
 
 %% Input parameters
 % * |modes| is a structure array describing the optimization in physical
@@ -18,14 +18,15 @@ function [opt_prob] = translation_layer(modes, solver)
 %   in linear algebra terms.
 
     for i = 1 : length(modes)
-        opt_prob(i) = translate_mode(modes(i), solver);
+        [opt_prob(i), J{i}, E_out{i}] = ...
+                translate_mode(modes(i), solver);
     end
 
 end % End of translation_layer function.
 
 %% translate_mode private function
 % Translates a single mode.
-function [opt_prob] = translate_mode(mode, solver)
+function [opt_prob, J, E_out] = translate_mode(mode, solver)
 
     % Allows us to stop writing mode.* everywhere...
     omega = mode.omega;
@@ -53,11 +54,14 @@ function [opt_prob] = translate_mode(mode, solver)
     [beta, E, H, J] = solve_waveguide_mode(omega, s_prim, s_dual, ...
                                             mu, epsilon, ...
                                             in.pos, in.dir, in.mode_num);
+    for k = 1 : 3 % Scale the input excitation.
+        J{k} = sqrt(in.power) * J{k};
+    end
+
     % Translate to linear algebra.
     [A1, A2, m, e, b] = maxwell_matrices(omega, s_prim, s_dual, ...
                                             mu, epsilon, J);
 
-    b = sqrt(in.power) * b; % Scale the input excitation.
 
     phys_res = struct(  'A', @(z) A1 * my_diag(1./m) * A2 - ...
                                     omega^2 * my_diag(e + S * z), ...
@@ -74,10 +78,10 @@ function [opt_prob] = translate_mode(mode, solver)
         out = outs(j);
 
         % Find the field pattern of the desired output mode.
-        [~, E] = solve_waveguide_mode(omega, s_prim, s_dual, ...
+        [~, E_out{j}] = solve_waveguide_mode(omega, s_prim, s_dual, ...
                                        mu, epsilon, ...
                                        out.pos, out.dir, out.mode_num);
-        C(:,j) = vec(E); % Vectorize
+        C(:,j) = vec(E_out{j}); % Vectorize
         alpha(j,1) = sqrt(out.power(1)) * norm(C(:,j))^2; % Scale.
         beta(j,1) = sqrt(out.power(2)) * norm(C(:,j))^2;
     end
@@ -87,7 +91,8 @@ function [opt_prob] = translate_mode(mode, solver)
                         'C', C);
 
     %% 
-    % Create function handles for solving for A and its conjugate transpose.
+    % Create function handles for solving for A 
+    % and its conjugate transpose.
 
     solve_A = @(z, b) my_solve_A(solver, unvec, ...
                                 omega, s_prim, s_dual, m, e + S * z, b);

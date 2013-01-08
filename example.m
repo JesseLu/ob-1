@@ -1,8 +1,9 @@
+function example()
     path(path, genpath('.'));
 
 
     %% Hard-coded constants.
-    omega = 0.12;
+    omega = 0.15;
     dims = [80 80 1];
     z_thickness = 10;
     z_center = dims(3)/2;
@@ -25,14 +26,14 @@
                         'size', [1e9 12], ...
                         'permittivity', eps_hi)};
 
-    epsilon = add_planar(epsilon, z_center, z_thickness, my_shapes); 
+    epsilon_0 = add_planar(epsilon, z_center, z_thickness, my_shapes); 
 
     [s_prim, s_dual] = stretched_coordinates(omega, dims, [10 10 0]);
 
     % Build the selection matrix, and reset values of epsilon.
-    [S, epsilon] = planar_selection_matrix('alternate', epsilon, ...
-                                            {[21 21], [60 60]}, eps_lo, ...
-                                            z_center, z_thickness);
+    [S, epsilon] = planar_selection_matrix('alternate', epsilon_0, ...
+                                        {[21 21], [60 60]}, eps_lo, ...
+                                        z_center, z_thickness);
 
 
     %% Specify structure design objective 
@@ -54,9 +55,9 @@
                     'mode_num', mode_num);
 
     modes(1) = struct('omega', omega, ...
-                    'in', wg(1, 15, 'x+', 1), ...
-                    'out', [wg([0.9 1], 65, 'x+', 1), ...
-                            wg([0 0.1], 15, 'x-', 1)], ...
+                    'in', wg(1, 15, 'x+', 3), ...
+                    'out', [wg([0.9 1], 68, 'x+', 3), ...
+                            wg([0 0.1], 12, 'x-', 3)], ...
                     's_prim', {s_prim}, ...
                     's_dual', {s_dual}, ...
                     'mu', {mu}, ...
@@ -65,28 +66,56 @@
 
 
     %% Construct the optimization problem
-    opt_prob = translation_layer(modes, @solve_local);
+    [opt_prob, J, E_out] = translation_layer(modes, @solve_local);
+    % test_opt_prob(opt_prob, S); % Use to test opt_prob.
 
-%     % Test opt_prob.
-%     n = size(S, 1);
-%     l = size(S, 2);
-%     x = randn(n, 1) + 1i * randn(n, 1);
-%     z = randn(l, 1) + 1i * randn(l, 1);
-% 
-%     for i = 1 : length(opt_prob)
-%         pr = opt_prob(i).phys_res;
-%         phys_res_error(i) = norm(pr.A(z)*x-pr.b(z) - (pr.B(x)*z-pr.d(x)));  
-% 
-%         cb1 = opt_prob(i).solve_A(z, x);
-%         cb2 = opt_prob(i).solve_A_dagger(z, x);
-%         done = [false false];
-%         while ~all(done)
-%             [~, done(1)] = cb1();
-%             [~, done(2)] = cb2();
-%         end
-%         solve_A_error(i) = norm(pr.A(z) * cb1() - x);
-%         solve_A_dagger_error(i) = norm(pr.A(z)' * cb2() - x);
-%         fprintf('pr: %e, sA: %e, sAd: %e\n', phys_res_error(i), ...
-%                                 solve_A_error(i), solve_A_dagger_error(i));
+
+    %% Optimize
+    p0 = struct_obj.p_range(:,2);
+    [z, p] = run_optimization(opt_prob, struct_obj, p0);
+
+
+    %% Visualize and test.
+    cb = solve_local(omega, s_prim, s_dual, mu, epsilon_0, J{1})
+    while ~cb()
+    end
+    [~, E] = cb();
+    subplot 121; imagesc(real(E{3})');
+    subplot 122; imagesc(real(E_out{1}{2}{3})');
+    (abs(dot(E{3}(:), E_out{1}{1}{3}(:))) / norm(E_out{1}{1}{3}(:))^2)^2
+    (abs(dot(E{3}(:), E_out{1}{2}{3}(:))) / norm(E_out{1}{2}{3}(:))^2)^2
+%     for k = 1 : 3
+%         subplot(1, 3, k);
+%         imagesc(abs(E{k})');
+%         axis equal tight;
 %     end
+
+
+function test_opt_prob(opt_prob, S)
+
+    % Test opt_prob.
+    n = size(S, 1);
+    l = size(S, 2);
+    x = randn(n, 1) + 1i * randn(n, 1);
+    z = randn(l, 1) + 1i * randn(l, 1);
+
+    for i = 1 : length(opt_prob)
+        pr = opt_prob(i).phys_res;
+        phys_res_error(i) = norm(pr.A(z)*x-pr.b(z) - ...
+                                    (pr.B(x)*z-pr.d(x)));  
+
+        cb1 = opt_prob(i).solve_A(z, x);
+        cb2 = opt_prob(i).solve_A_dagger(z, x);
+        done = [false false];
+        while ~all(done)
+            [~, done(1)] = cb1();
+            [~, done(2)] = cb2();
+        end
+        solve_A_error(i) = norm(pr.A(z) * cb1() - x);
+        solve_A_dagger_error(i) = norm(pr.A(z)' * cb2() - x);
+        fprintf('opt_prob_test [pr: %e, sA: %e, sAd: %e]\n', ...
+                                            phys_res_error(i), ...
+                                            solve_A_error(i), ...
+                                            solve_A_dagger_error(i));
+    end
 

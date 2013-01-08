@@ -136,7 +136,7 @@ function [beta, E, H, J] = solve_waveguide_mode(omega, s_prim, s_dual, ...
     % At the same time, additional error is introduced into the E_err and H_err terms.
     % This effect becomes more pronounced as beta increases.
     beta_corr = 2*sin(real(beta/2)) - real(beta);
-    beta = beta + beta_corr;
+    beta = beta + 0 * beta_corr; % Turn off correction.
 
     % Fields.
     [E_small, H_small, J_small, E_err, H_err] = get_wg_fields(beta, v);
