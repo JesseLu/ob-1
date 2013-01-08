@@ -16,22 +16,52 @@ function [z, p] = update_structure(P, q, g, p0)
         case 'continuous'
             p = p0;
 
+            f_uncomp = @(p) 1/2 * norm(P * g.m(p) - q)^2 + g.w(p);
+
             my_compressor = @(p) ...
                 (p <= g.p_range(:,1)) .* g.p_range(:,1) + ...
                 (p >= g.p_range(:,2)) .* g.p_range(:,2) + ...
                 ((p > g.p_range(:,1)) & p < g.p_range(:,2)) .* p;
             m = @(p) g.m(my_compressor(p));
             w = @(p) g.w(my_compressor(p));
-            f = @(p) 1/2 * norm(P * m(p) - q) + w(p);
+            f = @(p) 1/2 * norm(P * m(p) - q)^2 + w(p);
 
-            for k = 1 : 10
-                % Parameterize to find the gradient.
-                [A, b] = my_parameterize(P, q, g, p);
-                dp = A' * (A*p - b);
+            filter_grad = @(grad, p) ...
+                ~(  ((p <= g.p_range(:,1)) & grad > 0) | ...
+                    ((p >= g.p_range(:,2)) & grad < 0)) .* grad;
+
+            f_prev = f(p);
+            err = [];
+            while true
+                % Empirically find gradient.
+                dp = get_gradient(@(p) f_uncomp(p), p)';
+
+                % Plot error.
+                err(end+1) = norm(filter_grad(dp, p));
+                semilogy(err, '.-');
 
                 % Perform line search
-                delta_p = line_search_brute(f, dp, p, p_err)
+                optim_step = line_search_brute(f, -dp, p, 1e-6);
+
+                if optim_step == 0 % If no step, we're done.
+                    break
+                end
+
+                % Update p.
+                p = my_compressor(p - optim_step * dp);
+                
+                % Make sure the residual never increases.
+                f_curr = f(p);
+                if f_curr > f_prev
+                    f_curr - f_prev
+                    error('Function value increased!');
+                else
+                    f_prev = f_curr;
+                end
             end
+
+            p = my_compressor(p);
+            z = g.m(p);
 
 
         %% Continuous-linear case

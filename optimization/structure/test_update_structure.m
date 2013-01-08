@@ -17,8 +17,12 @@ function test_update_structure(l)
     q = randn(l, 1) + 1i * randn(l, 1);
 
     p0 = rand(l, 1);
-    [z, p] = update_structure(P, q, g, p0);
+    [z, p1] = update_structure(P, q, g, p0);
 
+    g.scheme = 'continuous';
+    [z, p2] = update_structure(P, q, g, p0);
+    p1 
+    p2
 
     %% Test the discrete-diagonal sheme
     A_p = diag(diag(A_p));

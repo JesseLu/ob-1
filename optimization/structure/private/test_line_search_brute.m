@@ -7,5 +7,8 @@
 
     f = @(x) 1/2 * norm(A*x - b)^2;
     grad_f = @(x) A' * (A*x - b);
+    dx = -grad_f(x0);
+    optim_step = line_search_brute(f, dx, x0, 1e-6);
 
-    line_search_brute(f, -grad_f(x0)./1e10, x0, 1e-6)
+
+    dx' * grad_f(x0 + optim_step * dx) 
