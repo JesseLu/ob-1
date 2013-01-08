@@ -4,21 +4,26 @@
 %% Description
 % 
 
-function [modes] = verification_layer(opt_prob, z)
+function [modes] = verification_layer(opt_prob, z, varargin)
 
     N = length(opt_prob);
 
-    % Start all simulations.
-    for i = 1 : N
-        cb{i} = opt_prob(i).solve_A(z, opt_prob(i).phys_res.b(z));
-    end
-
-    % Wait for all simulations to complete.
-    done = false * ones(N, 1);
-    while ~all(done)
+    if isempty(varargin) % No x submitted.
+        % Start all simulations.
         for i = 1 : N
-            [x{i}, done(i)] = cb{i}();
+            cb{i} = opt_prob(i).solve_A(z, opt_prob(i).phys_res.b(z));
         end
+
+        % Wait for all simulations to complete.
+        done = false * ones(N, 1);
+        while ~all(done)
+            for i = 1 : N
+                [x{i}, done(i)] = cb{i}();
+            end
+        end
+
+    else
+        x = varargin{1};
     end
 
     % Calculate relevant performance and visualization information.

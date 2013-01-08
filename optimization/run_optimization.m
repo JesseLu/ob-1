@@ -3,7 +3,7 @@
 
 %% Description
 
-function [z, p] = run_optimization(opt_prob, g, p0, paradigm)
+function [z, p, state] = run_optimization(opt_prob, g, p0, paradigm)
 
     %% Parse inputs
 
@@ -20,7 +20,6 @@ function [z, p] = run_optimization(opt_prob, g, p0, paradigm)
     else
         error('Invalid paradigm.');
     end
-    state
 
 
 

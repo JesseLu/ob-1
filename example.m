@@ -56,7 +56,7 @@ function example()
 
     modes(1) = struct('omega', omega, ...
                     'in', wg(1, 15, 'x+', 1), ...
-                    'out', [wg([0.9 1], 68, 'x+', 1), ...
+                    'out', [wg([0.99 1], 68, 'x+', 1), ...
                             wg([0 0.1], 12, 'x-', 1)], ...
                     's_prim', {s_prim}, ...
                     's_dual', {s_dual}, ...
@@ -72,11 +72,12 @@ function example()
 
     %% Optimize
     p0 = struct_obj.p_range(:,2);
-    [z, p] = run_optimization(opt_prob, struct_obj, p0, 'local');
-    [z, p] = run_optimization(opt_prob, struct_obj, p0, 'global');
+    [z, p, state] = run_optimization(opt_prob, struct_obj, p0, 'local');
+    [z, p, state] = run_optimization(opt_prob, struct_obj, p0, 'global');
 
     %% Verify
-    modes = verification_layer(opt_prob, z);
+    % modes = verification_layer(opt_prob, z);
+    modes = verification_layer(opt_prob, z, state.x);
 
     fprintf('     alpha    result      beta\n');
     disp(modes(1).output_power)

@@ -160,6 +160,13 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     %% Execute Newton's algorithm
     % Minimize using Newton's method.
 
+    % Make sure we start with a feasible x.
+    for k = 1 : N
+        if isinf(f{k}(x{k}))
+            error('Initial x is infeasible.');
+        end
+    end
+
     % Keeps track which modes have already been solved
     mode_done = false * ones(1, N);
 
