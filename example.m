@@ -1,7 +1,13 @@
-function example()
+%% example
+% A simple example of an optimization.
+
+%% Description
+%
+
+function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargin)
+
+    %% Source code
     path(path, genpath('.'));
-
-
     %% Hard-coded constants.
     omega = 0.12;
     dims = [80 80 1];
@@ -31,7 +37,7 @@ function example()
     [s_prim, s_dual] = stretched_coordinates(omega, dims, [10 10 0]);
 
     % Build the selection matrix, and reset values of epsilon.
-    [S, epsilon] = planar_selection_matrix('average', epsilon_0, ...
+    [S, epsilon] = planar_selection_matrix(S_type, epsilon_0, ...
                                         {[21 21], [60 60]}, eps_lo, ...
                                         z_center, z_thickness);
 
@@ -41,7 +47,7 @@ function example()
     struct_obj = struct('m', @(p) p, ...
                         'w', @(p) 0, ...
                         'p_range', ones(size(S,2), 1) * [0 1], ...
-                        'scheme', 'continuous-linear');
+                        'scheme', update_scheme);
 
 
     %% Specify modes
@@ -56,8 +62,8 @@ function example()
 
     modes(1) = struct('omega', omega, ...
                     'in', wg(1, 15, 'x+', 1), ...
-                    'out', [wg([0.99 1], 68, 'x+', 1), ...
-                            wg([0 0.1], 68, 'x+', 3), ...
+                    'out', [wg([0.99 1], 68, 'x+', 3), ...
+                            wg([0 0.1], 68, 'x+', 1), ...
                             wg([0 0.1], 12, 'x-', 1)], ...
                     's_prim', {s_prim}, ...
                     's_dual', {s_dual}, ...
@@ -66,19 +72,49 @@ function example()
                     'S', (eps_hi - eps_lo) * S);
 
 
-    %% Construct the optimization problem
+    %% Translate
     [opt_prob, J, E_out] = translation_layer(modes, @solve_local);
     % test_opt_prob(opt_prob, S); % Use to test opt_prob.
 
 
     %% Optimize
     p0 = struct_obj.p_range(:,2);
-    % [z, p, state] = run_optimization(opt_prob, struct_obj, p0, 'local');
-    [z, p, state] = run_optimization(opt_prob, struct_obj, p0, 'global');
+    options = struct(   'paradigm', paradigm, ...
+                        'num_iters', num_iters, ...
+                        'err_thresh', err_thresh, ...
+                        'paradigm_args', {{}}, ...
+                        'structure_args', {{}}, ...
+                        'vis_progress', @(state, z, p) ...
+                                        vis_progress(opt_prob, state, z, p));
 
-    %% Verify
-    modes = verification_layer(opt_prob, z);
-    % modes = verification_layer(opt_prob, z, state.x);
+    if ~isempty(varargin)
+        opt_state = load(varargin{1});
+        opt_prob = opt_state.opt_prob;
+        struct_obj = opt_state.g;
+        p0 = opt_state.p;
+        options.num_iters = options.num_iters - opt_state.k;
+        state = opt_state.state;
+    else
+        state = [];
+    end
+    [z, p, state] = run_optimization(opt_prob, struct_obj, p0, options, state);
+
+
+
+    state
+    %% Visualize.
+    vis_progress(opt_prob, [], z, p);
+
+end % End example function.
+
+
+%% Private functions
+function vis_progress(opt_prob, state, z, p)
+    if isempty(state)
+        modes = verification_layer(opt_prob, z);
+    else
+        modes = verification_layer(opt_prob, z, state.x);
+    end
 
     fprintf('     alpha    result      beta\n');
     disp(modes(1).output_power)
@@ -86,24 +122,13 @@ function example()
     % Visualize.
     subplot 121; imagesc(modes(1).epsilon{2}'); axis equal tight;
     subplot 122; imagesc(abs(modes(1).E{3})'); axis equal tight;
+    drawnow
+end
 
-%     %% Visualize and test.
-%     cb = solve_local(omega, s_prim, s_dual, mu, epsilon_0, J{1})
-%     while ~cb()
-%     end
-%     [~, E] = cb();
-%     subplot 121; imagesc(real(E{3})');
-%     subplot 122; imagesc(real(E_out{1}{2}{3})');
-%     (abs(dot(E{3}(:), E_out{1}{1}{3}(:))) / norm(E_out{1}{1}{3}(:))^2)^2
-%     (abs(dot(E{3}(:), E_out{1}{2}{3}(:))) / norm(E_out{1}{2}{3}(:))^2)^2
-%     for k = 1 : 3
-%         subplot(1, 3, k);
-%         imagesc(abs(E{k})');
-%         axis equal tight;
-%     end
 
 
 function test_opt_prob(opt_prob, S)
+% Tests the opt_prob structure.
 
     % Test opt_prob.
     n = size(S, 1);
@@ -130,4 +155,4 @@ function test_opt_prob(opt_prob, S)
                                             solve_A_error(i), ...
                                             solve_A_dagger_error(i));
     end
-
+end % End  test_opt_prob private function.

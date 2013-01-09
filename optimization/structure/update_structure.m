@@ -8,7 +8,7 @@
 % of its parameterization variable p.
 % For this reason, the problem is typically converted into "p-space".
 
-function [z, p] = update_structure(P, q, g, p0)
+function [z, p] = update_structure(P, q, g, p0, varargin)
     
 %% Input parameters
 % * |P| and |q| describe Q(z).

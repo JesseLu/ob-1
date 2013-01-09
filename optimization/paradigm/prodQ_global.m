@@ -248,6 +248,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     state.newton_success = newton_success;
     state.newton_progress = progress;
 
+    state.phi = phi;
     state.x = x;
     state.u = u;
     state.update_u = update_u;
