@@ -140,7 +140,8 @@ function [z, p] = update_structure(P, q, g, p0)
             % Function handle to extract the individual components
             % of the structure design objective.
             my_diag = @(u) spdiags(u(:), 0, numel(u), numel(u));
-            f = @(p) 1/2 * abs(P * g.m(p) - q).^2 + g.w(my_diag(p)).';
+            f = @(p) real(my_diag(g.m(p)') * P' * (0.5 * P * g.m(p) - q)) ...
+                        + g.w(my_diag(p)).';
 
             % Try all combinations of p.
             for k = 1 : size(g.p_range, 2)

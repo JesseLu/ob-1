@@ -6,7 +6,8 @@ function test_update_structure(l_max, test_time)
     start_time = tic;
     
     while toc(start_time) < test_time 
-        l = randi(l_max);
+        l = randi(l_max) + 1;
+        n = randi(5) * l;
         %% Test the continuous-linear scheme
         A_p = randn(l) + 1i * randn(l);
         b_p = randn(l, 1) + 1i * randn(l, 1);
@@ -16,8 +17,8 @@ function test_update_structure(l_max, test_time)
                     'p_range', ones(l, 1) * [0 1], ...
                     'scheme', 'continuous-linear');
 
-        P = randn(l) + 1i * randn(l);
-        q = randn(l, 1) + 1i * randn(l, 1);
+        P = randn(n, l) + 1i * randn(n, l);
+        q = randn(n, 1) + 1i * randn(n, 1);
 
         p0 = rand(l, 1);
         [z, p1] = update_structure(P, q, g, p0);
@@ -33,7 +34,11 @@ function test_update_structure(l_max, test_time)
 
         %% Test the discrete scheme
         A_p = diag(diag(A_p));
-        P = diag(diag(P));
+        P = repmat(diag(diag(P)), n/l, 1);
+        n
+        l
+        size(P)
+        size(A_p)
         g = struct( 'm', @(p) A_p * p - b_p, ...
                     'w', @(p) real(c_p' * p), ...
                     'p_range', ones(l, 1) * [0 1], ...
