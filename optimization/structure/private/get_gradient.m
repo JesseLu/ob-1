@@ -11,8 +11,7 @@ function [grad] = get_gradient(fun, u0, varargin)
     for k = 1 : length(u0)
         du = zeros(length(u0), 1);
         du(k) = 1;
-
-        grad(:,k) = 1./delta * (fun(u0 + delta * du) - f0);
+        grad(:,k) = sparse(1./delta * (fun(u0 + delta * du) - f0));
     end
 
 

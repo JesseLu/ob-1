@@ -42,16 +42,17 @@ function [z, p] = update_structure(P, q, g, p0)
 
             f_prev = f(p);
             err = [];
-            while true
+            for k = 1 : 10
                 % Empirically find gradient.
                 dp = get_gradient(@(p) f_uncomp(p), p)';
 
-%                 % Plot error.
-%                 err(end+1) = norm(filter_grad(dp, p));
-%                 semilogy(err, '.-');
+                % Plot error.
+                err(end+1) = norm(filter_grad(dp, p));
+                semilogy(err, '.-');
+                drawnow
 
                 % Perform line search
-                optim_step = line_search_brute(f, -dp, p, 1e-6);
+                optim_step = line_search_brute(f, -dp, p, 1e-4);
 
                 if optim_step == 0 % If no step, we're done.
                     break

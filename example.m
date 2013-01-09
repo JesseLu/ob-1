@@ -31,7 +31,7 @@ function example()
     [s_prim, s_dual] = stretched_coordinates(omega, dims, [10 10 0]);
 
     % Build the selection matrix, and reset values of epsilon.
-    [S, epsilon] = planar_selection_matrix('alternate', epsilon_0, ...
+    [S, epsilon] = planar_selection_matrix('average', epsilon_0, ...
                                         {[21 21], [60 60]}, eps_lo, ...
                                         z_center, z_thickness);
 
@@ -41,7 +41,7 @@ function example()
     struct_obj = struct('m', @(p) p, ...
                         'w', @(p) 0, ...
                         'p_range', ones(size(S,2), 1) * [0 1], ...
-                        'scheme', 'discrete-diagonal');
+                        'scheme', 'continuous-linear');
 
 
     %% Specify modes
@@ -73,12 +73,12 @@ function example()
 
     %% Optimize
     p0 = struct_obj.p_range(:,2);
-    [z, p, state] = run_optimization(opt_prob, struct_obj, p0, 'local');
+    % [z, p, state] = run_optimization(opt_prob, struct_obj, p0, 'local');
     [z, p, state] = run_optimization(opt_prob, struct_obj, p0, 'global');
 
     %% Verify
-    % modes = verification_layer(opt_prob, z);
-    modes = verification_layer(opt_prob, z, state.x);
+    modes = verification_layer(opt_prob, z);
+    % modes = verification_layer(opt_prob, z, state.x);
 
     fprintf('     alpha    result      beta\n');
     disp(modes(1).output_power)
