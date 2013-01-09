@@ -41,9 +41,9 @@ function [modes] = verification_layer(opt_prob, z, varargin)
         end
 
         % Get epsilon.
-        modes(i).epsilon = opt_prob.get_epsilon(z);
+        modes(i).epsilon = opt_prob(i).get_epsilon(z);
         
         % Get the E-field.
-        modes(i).E = opt_prob.unvec(x{i});
+        modes(i).E = opt_prob(i).unvec(x{i});
     end
 end
