@@ -30,6 +30,8 @@ function [modes] = verification_layer(opt_prob, z, varargin)
     for i = 1 : N
         fobj = opt_prob(i).field_obj;
 
+        size(fobj.C)
+        size(x{i})
         % Raw magnitude of output power.
         modes(i).raw_output_mag = [fobj.alpha, abs(fobj.C' * x{i}), ...
                                     fobj.beta]; 

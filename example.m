@@ -10,7 +10,7 @@ function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargi
     path(path, genpath('.'));
     %% Hard-coded constants.
     omega = 0.12;
-    dims = [80 80 1];
+    dims = [80 40 1];
     z_thickness = 10;
     z_center = dims(3)/2;
     eps_lo = 1.5;
@@ -29,7 +29,7 @@ function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargi
                         'permittivity', eps_lo), ...
                 struct('type', 'rectangle', ...
                         'position', [0 0], ...
-                        'size', [1e9 12], ...
+                        'size', [1e9 10], ...
                         'permittivity', eps_hi)};
 
     epsilon_0 = add_planar(epsilon, z_center, z_thickness, my_shapes); 
@@ -38,7 +38,7 @@ function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargi
 
     % Build the selection matrix, and reset values of epsilon.
     [S, epsilon] = planar_selection_matrix(S_type, epsilon_0, ...
-                                        {[21 21], [60 60]}, eps_lo, ...
+                                        {[21 15], [60 26]}, eps_lo, ...
                                         z_center, z_thickness);
 
 
@@ -90,12 +90,13 @@ function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargi
     %% Optimize
     p0 = struct_obj.p_range(:,2);
     options = struct(   'paradigm', paradigm, ...
+                        'starting_iter', 1, ...
                         'num_iters', num_iters, ...
                         'err_thresh', err_thresh, ...
-                        'paradigm_args', {{}}, ...
+                        'paradigm_args', {{'vis_progress', @vis_prodQ_global_progress}}, ...
                         'structure_args', {{}}, ...
-                        'state_file', [], ...
-                        'history_file', [], ...
+                        'state_file', 'ex_state.mat', ...
+                        'history_file', 'ex_hist.h5', ...
                         'vis_progress', @(state, z, p) ...
                                         vis_progress(opt_prob, state, z, p));
 
@@ -104,7 +105,9 @@ function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargi
         opt_prob = opt_state.opt_prob;
         struct_obj = opt_state.g;
         p0 = opt_state.p;
-        options.num_iters = options.num_iters - opt_state.k;
+        options = opt_state.options;
+        options.starting_iter = opt_state.k + 1;
+        options.num_iters = num_iters;
         state = opt_state.state;
     else
         state = [];
@@ -112,8 +115,6 @@ function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargi
     [z, p, state] = run_optimization(opt_prob, struct_obj, p0, options, state);
 
 
-
-    state
     %% Visualize.
     vis_progress(opt_prob, [], z, p);
 
@@ -132,11 +133,26 @@ function vis_progress(opt_prob, state, z, p)
     disp(modes(1).output_power)
 
     % Visualize.
-    subplot 121; imagesc(modes(1).epsilon{2}'); axis equal tight;
-    subplot 122; imagesc(abs(modes(1).E{3})'); axis equal tight;
+    figure(1);
+    subplot 211; imagesc(modes(1).epsilon{2}'); axis equal tight;
+    subplot 212; imagesc(abs(modes(1).E{3})'); axis equal tight;
     drawnow
+
+    figure(2);
+    subplot 212; 
 end
 
+function vis_prodQ_global_progress(progress)
+    figure(2); 
+    subplot 211;
+    hold off
+    for i = 1 : length(progress)
+        semilogy([progress{i}(:).newton_dec], '.-');
+        hold on
+    end
+    ylabel('Newton step');
+    drawnow
+end
 
 
 function test_opt_prob(opt_prob, S)
