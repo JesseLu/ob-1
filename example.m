@@ -38,7 +38,7 @@ function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargi
 
     % Build the selection matrix, and reset values of epsilon.
     [S, epsilon] = planar_selection_matrix(S_type, epsilon_0, ...
-                                        {[21 15], [60 26]}, eps_lo, ...
+                                        {[21 16], [60 25]}, eps_lo, ...
                                         z_center, z_thickness);
 
 
@@ -129,28 +129,39 @@ function vis_progress(opt_prob, state, z, p)
         modes = verification_layer(opt_prob, z, state.x);
     end
 
-    fprintf('     alpha    result      beta\n');
-    disp(modes(1).output_power)
+%     fprintf('     alpha    result      beta\n');
+%     disp(modes(1).output_power)
 
-    % Visualize.
+    % Visualize epsilon.
     figure(1);
-    subplot 211; imagesc(modes(1).epsilon{2}'); axis equal tight;
-    subplot 212; imagesc(abs(modes(1).E{3})'); axis equal tight;
-    drawnow
+    subplot 111; imagesc(modes(1).epsilon{3}'); axis equal tight;
 
+    % Visualize certain fields.
     figure(2);
-    subplot 212; 
+    N = length(opt_prob);
+    for i = 1 : N
+        subplot(N, 1, i); 
+        imagesc(abs(modes(i).E{3})'); 
+        axis equal tight;
+    end
+
+    % Visualize the global convergence.
+    figure(3);
+    subplot 111; 
+    title('Global convergence');
+    % TODO: physics residual, and field design objective.
+    drawnow
 end
 
 function vis_prodQ_global_progress(progress)
-    figure(2); 
-    subplot 211;
+    figure(5); 
+    subplot 111;
     hold off
     for i = 1 : length(progress)
         semilogy([progress{i}(:).newton_dec], '.-');
         hold on
     end
-    ylabel('Newton step');
+    title('Convergence of Newton Method');
     drawnow
 end
 
