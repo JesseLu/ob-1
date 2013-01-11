@@ -8,6 +8,7 @@ function [modes] = verification_layer(opt_prob, z, varargin)
 
     N = length(opt_prob);
 
+    %% Compute x, if needed.
     if isempty(varargin) % No x submitted.
         % Start all simulations.
         for i = 1 : N
@@ -26,13 +27,16 @@ function [modes] = verification_layer(opt_prob, z, varargin)
         x = varargin{1};
     end
 
-    % Calculate relevant performance and visualization information.
+    %% Calculate relevant performance and visualization information.
     for i = 1 : N
         fobj = opt_prob(i).field_obj;
 
         % Raw magnitude of output power.
-        modes(i).raw_output_mag = [fobj.alpha, abs(fobj.C' * x{i}), ...
-                                    fobj.beta]; 
+        outputs = fobj.C' * x{i};
+        modes(i).raw_output_mag = [fobj.alpha, abs(outputs), fobj.beta]; 
+
+        % Output angles.
+        modes(i).output_degrees = angle(outputs) * (180/pi);
 
         % Output power in original units (of power).
         for j = 1 : size(fobj.C, 2)
@@ -40,10 +44,15 @@ function [modes] = verification_layer(opt_prob, z, varargin)
                 (modes(i).raw_output_mag(j,:)./norm(fobj.C(:,j))^2).^2;
         end
 
+        % Calculate the physics residual.
+        pr = opt_prob(i).phys_res;
+        modes(i).phys_res_norm = norm(pr.A(z) * x{i} - pr.b(z));
+
         % Get epsilon.
         modes(i).epsilon = opt_prob(i).get_epsilon(z);
         
         % Get the E-field.
         modes(i).E = opt_prob(i).unvec(x{i});
     end
+
 end

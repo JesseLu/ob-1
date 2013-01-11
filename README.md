@@ -4,6 +4,17 @@ Description
 Objective-first design for nanophotonic structures.
 
 
+Do-now
+------
+
+*   When alpha = 0, remove lower limit for prodQ_global.
+
+
+Do-later
+--------
+
+
+
 Outline
 -------
 
@@ -48,16 +59,5 @@ Application ideas
 
 Example usage
 -------------
-
-
-
-Do-now
-------
-
-*   Implement the physics and simulation modules.
-
-
-Do-later
---------
 
 

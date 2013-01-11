@@ -231,12 +231,12 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     end
 
 
-    %% Form Q(z)
+    %% Form Q(z) = 1/2 || Pz - q ||^2
     P = [];
     q = [];
     for k = 1 : N
         P = [P; pres(k).B(x{k})];
-        q = [q; pres(k).d(x{k})];
+        q = [q; (pres(k).d(x{k}) - u{k})];
     end
     
     % Scale by a factor of rho.

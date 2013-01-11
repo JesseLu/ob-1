@@ -52,14 +52,13 @@ function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
        else % Found a new lower bound.
             if f_next > f_lo % Sanity check!
                 warning('Non-convexity detected in line search.');
+            else
+                % Set new lower bound.
+                step_lo = step_size;
+                f_lo = f_next;
+                grad_lo = grad_next;
+                err_lo = err_next;
             end
-
-            % Set new lower bound.
-            step_lo = step_size;
-            f_lo = f_next;
-            grad_lo = grad_next;
-            err_lo = err_next;
-        
        end
 
         step_size = step_size * 2; % Increase interval.

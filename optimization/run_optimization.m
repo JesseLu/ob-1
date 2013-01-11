@@ -24,6 +24,7 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
 
     k = options.starting_iter - 1;
     log_state(); % Log initial state.
+    vp_state = [];
 
 
     %% Run optimization
@@ -46,7 +47,7 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
         [z, p] = update_structure(P, q, g, p, options.structure_args{:});  
 
         % Log and visualize.
-        options.vis_progress(state, z, p);
+        options.vis_progress(k, state.x, z, p);
         log_state();
         log_history(k, state.x, z, p);
 
