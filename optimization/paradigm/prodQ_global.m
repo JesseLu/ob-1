@@ -35,7 +35,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
             end
         end
 
-        state = struct( 't', 1e-3, ...
+        state = struct( 't', 1e3, ...
                         'rho', 10, ...
                         'newton_err_thresh', 1e-6, ...
                         'newton_max_steps', 100, ...
@@ -63,6 +63,11 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     x = state.x;
     u = state.u;
     update_u = state.update_u;
+
+    % Check some parameters.
+    if t < 1
+        error('Values of t less than 1 not accepted.');
+    end
 
     %% Update dual variables u
 
@@ -122,6 +127,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     %% Compose objective, gradient, and Hessian functional forms
     for k = 1 : N
         alpha = fobj(k).alpha;
+        a0 = (alpha ~= 0); % Used to cancel lower barrier if alpha is 0.
         beta = fobj(k).beta;
         C = fobj(k).C;
         phi = angle(C' * x{k});
@@ -130,15 +136,15 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         b = pres(k).b(z);
    
         % Scale factors used in gradient and Hessian.
-        r{k} = @(x) -exp(i*phi)./ (real(exp(-i*phi).*(C'*x)) - alpha) + ...
+        r{k} = @(x) a0 .* -exp(i*phi)./ (real(exp(-i*phi).*(C'*x)) - alpha) + ...
                     2 * (C'*x)./(beta.^2 - abs(C'*x).^2);
-        s{k} = @(x) 1./(real(exp(-i*phi).*(C'*x)) - alpha).^2 + ...
+        s{k} = @(x) a0 .* 1./(real(exp(-i*phi).*(C'*x)) - alpha).^2 + ...
                     2./(beta.^2 - abs(C'*x).^2) + ...
                     4 * abs(C'*x).^2./(beta.^2 - abs(C'*x).^2).^2;
 
         % Function composition of the objective and its gradient and Hessian.
         f{k} = @(x) rho/2 * norm(A*x - b + u{k})^2 + ...
-                    -1/t * sum(ln(real(exp(-i*phi).*(C'*x)) - alpha) + ...
+                    -1/t * sum(ln(real(exp(-i*phi).*(C'*x)) - alpha, a0) + ...
                                 ln(beta.^2 - abs(C'*x).^2));
         grad{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x); 
         multHess{k} = @(x, v) rho * A' * (A * v) + ...
@@ -256,17 +262,25 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
 end % End of prodQ_global function.
 
 %% Private functions
-function [z] = ln(x)
+function [z] = ln(x, varargin)
 % Custom log function which returns nan for non-zero imaginary part and 
 % real part <= 0.
 
     if ~all(isreal(x))
         error('Cannot accept complex arguments!');
-    elseif any(real(x) <= 0)
-        z = Inf;
-    else
-        z = log(x);
     end
+
+    z = log(x);
+
+    % Log gives complex results for negative x, eliminate these.
+    z(find(real(x) <= 0)) = -Inf;
+
+    % If needed, set some values to 0.
+    if ~isempty(varargin)
+        set_to_zero = varargin{1};
+        z(find(set_to_zero == 0)) = 0;
+    end
+
 end % End of ln function.
 
 function default_vis_progress(progress)

@@ -8,7 +8,8 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
     %% Set up logging.
     options = check_file_names(options);
     log_state = @() save(options.state_file, ...
-                        'k', 'opt_prob', 'g', 'z', 'p', 'state', 'options');
+                        'k', 'opt_prob', 'g', 'z', 'p', ...
+                        'state', 'options', 'progress');
     log_history = @(k, x, z, p) history_logger(options.history_file, ...
                                         {opt_prob.get_epsilon}, k, x, z, p);
     
@@ -17,9 +18,11 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
     p = p0;
     z = g.m(p);
     state = [];
+    progress = [];
 
     if ~isempty(varargin)
         state = varargin{1};
+        progress = varargin{2};
     end
 
     k = options.starting_iter - 1;
@@ -47,9 +50,9 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
         [z, p] = update_structure(P, q, g, p, options.structure_args{:});  
 
         % Log and visualize.
-        options.vis_progress(k, state.x, z, p);
+        progress = options.vis_progress(k, state.x, z, p);
         log_state();
-        log_history(k, state.x, z, p);
+        log_history(k, state.x, z, p); % Do this last, in case hdf5 calls fail.
 
         fprintf('\n');
     end

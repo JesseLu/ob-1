@@ -36,7 +36,7 @@ function [modes] = verification_layer(opt_prob, z, varargin)
         modes(i).raw_output_mag = [fobj.alpha, abs(outputs), fobj.beta]; 
 
         % Output angles.
-        modes(i).output_degrees = angle(outputs) * (180/pi);
+        modes(i).output_angle = angle(outputs);
 
         % Output power in original units (of power).
         for j = 1 : size(fobj.C, 2)

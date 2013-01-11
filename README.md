@@ -7,11 +7,10 @@ Objective-first design for nanophotonic structures.
 Do-now
 ------
 
-*   Figure out why there is no "wiggle room" in prodQ_global.
-*   Incorporate the progress tracking in restarts.
-*   When alpha = 0, remove lower limit for prodQ_global.
+
 *   Generalize track_progress to be able to select the plane and component
-    on which to visualize E and epsilon.
+    on which to visualize E and epsilon. (Detect center around 0)
+*   Simplify the call to run_optimization if possible.
 
 
 Do-later

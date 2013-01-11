@@ -1,6 +1,6 @@
 %% Private functions
-function [progress_out, x] = track_progress(opt_prob, struct_obj, mode_sel, ...
-                                        k, x, z, p, varargin)
+function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
+                                        mode_sel, k, x, z, p, varargin)
 
     N = length(opt_prob);
 
@@ -27,20 +27,24 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, mode_sel, ...
     progress.struct_obj(k) = struct_obj.w(p);
     for i = 1 : N
         progress.out_power{i}(:,k) = modes(i).output_power(:,2);
-        progress.out_degrees{i}(:,k) = modes(i).output_degrees;
+        progress.out_angle{i}(:,k) = modes(i).output_angle;
+        progress.out_degrees{i} = 180/pi*unwrap(progress.out_angle{i}, [], 2);
         progress.res_norm{i}(k) = modes(i).phys_res_norm;
     end
 
     % Visualize epsilon.
     figure(1); title('epsilon');
-    subplot 111; imagesc(modes(mode_sel(1)).epsilon{3}'); axis equal tight;
+    % subplot 111; imagesc(modes(mode_sel(1)).epsilon{G}'); axis equal tight;
+    subplot 111; 
+    my_vis_slice(modes(mode_sel(1)).epsilon, vis_layer, @real);
 
     % Visualize certain fields.
     figure(2);
     for i = mode_sel
         subplot(N, 1, i); 
-        imagesc(abs(modes(i).E{3})'); 
-        axis equal tight;
+        my_vis_slice(modes(mode_sel(i)).E, vis_layer, @abs);
+%         imagesc(abs(modes(i).E{3})'); 
+%         axis equal tight;
     end
 
     
@@ -69,3 +73,17 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, mode_sel, ...
     progress_out = progress;
 end
 
+function my_vis_slice(data, vis_layer, fun)
+    data = data{vis_layer.component};
+
+    switch vis_layer.slice_dir
+        case 'x'
+            data = data(vis_layer.slice_index, :, :);
+        case 'y'
+            data = data(:, vis_layer.slice_index, :);
+        case 'z'
+            data = data(:, :, vis_layer.slice_index);
+    end
+
+    imagesc(squeeze(fun(data))'); axis equal tight;
+end
