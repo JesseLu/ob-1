@@ -46,22 +46,22 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, mode_sel, ...
     
     % Field design objective (power).
     figure(3); 
-    my_lineplot(@plot, progress.iters, progress.out_power, mode_sel);
+    custom_lineplot(@plot, progress.iters, progress.out_power, mode_sel);
     title('Output powers');
 
     % Field design objective (angle).
     figure(4);
-    my_lineplot(@plot, progress.iters, progress.out_degrees, mode_sel);
+    custom_lineplot(@plot, progress.iters, progress.out_degrees, mode_sel);
     title('Output angles');
 
     % Structure design objective.
     figure(5);
-    my_lineplot(@semilogy, progress.iters, progress.res_norm, mode_sel);
+    custom_lineplot(@semilogy, progress.iters, progress.res_norm, mode_sel);
     title('Physics residuals');
 
     % Physics residual.
     figure(6);
-    plot(progress.struct_obj);
+    plot(progress.struct_obj, 'k.-');
     title('Structure objective');
 
     drawnow
@@ -69,26 +69,3 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, mode_sel, ...
     progress_out = progress;
 end
 
-%% Private functions
-function my_lineplot(plot_fun, x, y, mode_sel)
-    subplot 111;
-    for i = 1 : length(y) 
-        plot_fun(x, y{i}', 'k-');
-        hold on 
-        if any(i == mode_sel)
-            for j = 1 : size(y{i}, 1)
-                plot_fun(x, y{i}(j,:), my_linestyle(i,j));
-            end
-        end
-    end
-    hold off
-end
-
-
-function [linestyle] = my_linestyle(i, j)
-    linecolors =  'bgrcm';
-    linemarkers = '.ox+*sd';
-    color_ind = mod(i-1, length(linecolors)) + 1;
-    marker_ind = mod(j-1, length(linemarkers)) + 1;
-    linestyle = [linecolors(color_ind), linemarkers(marker_ind), '-'];
-end
