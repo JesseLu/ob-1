@@ -71,11 +71,17 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
 
     %% Update dual variables u
 
+    % Calculate physics residual, useful for later as well, to test 
+    % for improvement (and whether or not to reset u).
+    for k = 1 : N
+        physics_residuals{k} = pres(k).A(z) * x{k} - pres(k).b(z);
+    end
+
     % Check if an update is needed.
     if update_u
         % Update u variables.
         for k = 1 : N 
-            u{k} = u{k} + pres(k).A(z) * x{k} - pres(k).b(z);
+            u{k} = u{k} + physics_residuals{k};
         end
 
     else 
@@ -84,6 +90,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         % whenever prodQ_global is called.
         update_u = true; 
     end
+
 
     %% Compute A_dagger^-1 C values (tilde C)
     % The transformed values of C are used to efficiently calculate the Newton 
@@ -234,6 +241,26 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         warning('Newton algorithm did not reach error threshold.');
     else
         newton_success = true;
+    end
+
+    %% Check whether or not the scaled dual variables (u) need to be reset
+    % u_i is reset for every mode which has failed to decrease its physics 
+    % residual.
+    reset_u_flag = false * ones(N, 1);
+    for k = 1 : N
+        new_physics_residual{k} = pres(k).A(z) * x{k} - pres(k).b(z);
+        if norm(new_physics_residual{k}) > norm(physics_residuals{k})
+            u{k} = zeros(size(u{k})); % Reset this mode's u to zero.
+            reset_u_flag(k) = true;
+        end
+    end
+
+    if any(reset_u_flag)
+        fprintf('[reset_u:');
+        for k = find(reset_u_flag)
+            fprintf(' %d', k);
+        end
+        fprintf(']');
     end
 
 

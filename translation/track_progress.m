@@ -43,8 +43,7 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
     for i = mode_sel
         subplot(N, 1, i); 
         my_vis_slice(modes(mode_sel(i)).E, vis_layer, @abs);
-%         imagesc(abs(modes(i).E{3})'); 
-%         axis equal tight;
+        title(['Mode ', num2str(i)]);
     end
 
     
@@ -85,5 +84,13 @@ function my_vis_slice(data, vis_layer, fun)
             data = data(:, :, vis_layer.slice_index);
     end
 
-    imagesc(squeeze(fun(data))'); axis equal tight;
+    data = squeeze(fun(data));
+
+    if any(data(:) < 0) && any(data(:) > 0)
+        cmax = max(abs(data(:)));
+        imagesc(data');
+    else
+        imagesc(data');
+    end
+    axis equal tight;
 end

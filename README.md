@@ -7,15 +7,14 @@ Objective-first design for nanophotonic structures.
 Do-now
 ------
 
-
-*   Generalize track_progress to be able to select the plane and component
-    on which to visualize E and epsilon. (Detect center around 0)
-*   Simplify the call to run_optimization if possible.
+*   Investigate different schemes to reset u in order for this to work:
+    example('global', 'average', 'continuous-linear', 40, 1e-6);
 
 
 Do-later
 --------
 
+*   Simplify the call to run_optimization if possible.
 
 
 Outline

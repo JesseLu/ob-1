@@ -1,7 +1,13 @@
 function custom_lineplot(plot_fun, x, y, mode_sel)
+    if isempty(x)
+        generate_x = true;
+    else
+        generate_x = false;
+    end
+
     subplot 111;
     for i = 1 : length(y) 
-        if isempty(x)
+        if generate_x
             x = 1 : size(y{i}, 2);
         end
 
