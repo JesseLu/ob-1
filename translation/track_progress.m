@@ -69,21 +69,25 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
     
     % Field design objective (power).
     figure(3); 
+    subplot 141
     custom_lineplot(@plot, progress.iters, progress.out_power, mode_sel);
     title('Output powers');
 
     % Field design objective (angle).
-    figure(4);
+    % figure(4);
+    subplot 142
     custom_lineplot(@plot, progress.iters, progress.out_degrees, mode_sel);
     title('Output angles');
 
     % Structure design objective.
-    figure(5);
+    % figure(5);
+    subplot 143
     custom_lineplot(@semilogy, progress.iters, progress.res_norm, mode_sel);
     title('Physics residuals');
 
     % Physics residual.
-    figure(6);
+    % figure(6);
+    subplot 144
     plot(progress.struct_obj, 'k.-');
     title('Structure objective');
 

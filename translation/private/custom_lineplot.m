@@ -5,7 +5,7 @@ function custom_lineplot(plot_fun, x, y, mode_sel)
         generate_x = false;
     end
 
-    subplot 111;
+    % subplot 111;
     for i = 1 : length(y) 
         if generate_x
             x = 1 : size(y{i}, 2);
