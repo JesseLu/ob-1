@@ -46,6 +46,7 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
                 for i = 1 : length(state.u)
                     state.u{i} = 0 * state.u{i};
                 end
+                state.update_u = false;
             end
 
             % Produce Q(z).       
