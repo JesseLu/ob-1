@@ -129,7 +129,7 @@ function [vis_result] = example(paradigm, S_type, update_scheme, ...
 
     %% Visualize.
     vis_result = @() track_progress(opt_prob, struct_obj, vis_layer, ...
-                                    mode_sel, num_iters+1, [], z, p);
+                                    mode_sel, [], [], z, p);
 
 end % End example function.
 

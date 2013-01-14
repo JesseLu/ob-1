@@ -10,7 +10,7 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
         progress = varargin{1};
     end
 
-    if (k == 1)  
+    if k == 1  
         for i = 1 : N
             empty_cells{i} = [];
         end
@@ -39,6 +39,9 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
 %             end
 %         end
 %     end
+    if isempty(k)
+        k = length(progress.iters) + 1;
+    end
 
     progress.iters(k) = k;
     progress.struct_obj(k) = struct_obj.w(p);

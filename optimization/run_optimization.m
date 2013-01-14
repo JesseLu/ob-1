@@ -32,7 +32,7 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
 
     %% Run optimization
     for k = options.starting_iter : options.num_iters
-        fprintf('%d:', k);
+        fprintf('%2d:', k);
 
         % Generate Q(z).
         if strcmp(options.paradigm, 'local')
@@ -40,6 +40,12 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
                                         options.paradigm_args{:});
                                     
         elseif strcmp(options.paradigm, 'global')
+            % Detect termination condition.
+            if detect_global_termination(progress, options.err_thresh)
+                fprintf(' [termination]\n');
+                break
+            end
+
             % Decide whether or not to reset dual variables u_i.
             if detect_u_reset(progress)
                 fprintf(' [u_reset]');
@@ -98,6 +104,22 @@ function [reset_u] = detect_u_reset(progress)
         if max(curr_res_norm) > max(prev_res_norm)
             reset_u = true;
         end
+    end
+end
+
+function [done] = detect_global_termination(progress, err_thresh)
+% Decides whether or not the dual variables u should be reset.
+
+    done = false;
+    if ~isstruct(progress)
+        return
+    end
+
+    for i = 1 : length(progress.res_norm)
+        res_norm(i) = progress.res_norm{i}(end);
+    end
+    if max(res_norm) < err_thresh
+        done = true;
     end
 end
 
