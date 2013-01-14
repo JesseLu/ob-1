@@ -40,7 +40,13 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
                                         options.paradigm_args{:});
                                     
         elseif strcmp(options.paradigm, 'global')
-            fprintf(' %e', norm(z));
+            % Decide whether or not to reset dual variables u_i.
+            if detect_u_reset(progress)
+                fprintf(' [u_reset]');
+                for i = 1 : length(state.u)
+                    state.u{i} = 0 * state.u{i};
+                end
+            end
 
             % Produce Q(z).       
             [P, q, state] = prodQ_global(z, opt_prob, state, ...
@@ -57,8 +63,6 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
         log_state();
         log_history(k, state.x, z, p); % Do this last, in case hdf5 calls fail.
 
-            % Decide whether or not to reset dual variables u_i.
-            [state, p, z] = conditional_u_reset(progress, state, p, z);
         fprintf('\n');
     end
 end % End run_optimization function.
@@ -78,50 +82,21 @@ function [options] = check_file_names(options)
     end
 end
 
-function [state, p, z] = conditional_u_reset(progress, state, p, z)
+function [reset_u] = detect_u_reset(progress)
 % Decides whether or not the dual variables u should be reset.
-    persistent best_state best_p best_z
 
-    % Make sure we actually have progress and state structures!
-    if ~isstruct(progress) || ~isstruct(state)
+    reset_u = false;
+    if ~isstruct(progress)
         return
     end
-
-    N = length(progress.res_norm); % Number of modes.
-
-    % Get the maximum residual of every iteration.
-    for i = 1 : N
-        res_norms(i,:) = progress.res_norm{i}(:);
-    end
-    max_res = max(res_norms, [], 1);
-
-    % Detect if latest progress is the best so far.
-    [temp, ind] = min(max_res);
-    if ind == length(max_res)
-        best_state = state
-        best_p = p;
-        best_z = z;
-        fprintf('.');
-    end
-
-    % Detect if we should reset u.
-    reset_u = false;
     if length(progress.res_norm{1}) >= 2
-        if max_res(end) > max_res(end-1)
+        for i = 1 : length(progress.res_norm)
+            prev_res_norm(i) = progress.res_norm{i}(end-1);
+            curr_res_norm(i) = progress.res_norm{i}(end);
+        end
+        if max(curr_res_norm) > max(prev_res_norm)
             reset_u = true;
         end
-    end
-
-    % If needed, reset u.
-    if reset_u
-        fprintf(' [u_reset]');
-        state = best_state;
-        p = best_p;
-        z = best_z;
-        for i = 1 : N
-            state.u{i} = 0 * state.u{i};
-        end 
-        state.update_u = false;
     end
 end
 
