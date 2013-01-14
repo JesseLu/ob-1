@@ -4,7 +4,7 @@
 %% Description
 %
 
-function [opt_prob, E_out] = example(paradigm, S_type, update_scheme, ...
+function [vis_result] = example(paradigm, S_type, update_scheme, ...
                                         num_iters, err_thresh, varargin)
 
     %% Source code
@@ -122,13 +122,14 @@ function [opt_prob, E_out] = example(paradigm, S_type, update_scheme, ...
         state = [];
         progress = [];
     end
+
     [z, p, state] = run_optimization(opt_prob, struct_obj, p0, options, ...
                                         state, progress);
 
 
     %% Visualize.
-    track_progress(opt_prob, struct_obj, vis_layer, mode_sel, ...
-                    num_iters+1, [], z, p);
+    vis_result = @() track_progress(opt_prob, struct_obj, vis_layer, ...
+                                    mode_sel, num_iters+1, [], z, p);
 
 end % End example function.
 
