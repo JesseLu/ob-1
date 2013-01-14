@@ -243,25 +243,25 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         newton_success = true;
     end
 
-    %% Check whether or not the scaled dual variables (u) need to be reset
-    % u_i is reset for every mode which has failed to decrease its physics 
-    % residual.
-    reset_u_flag = false * ones(N, 1);
-    for k = 1 : N
-        new_physics_residual{k} = pres(k).A(z) * x{k} - pres(k).b(z);
-        if norm(new_physics_residual{k}) > norm(physics_residuals{k})
-            u{k} = zeros(size(u{k})); % Reset this mode's u to zero.
-            reset_u_flag(k) = true;
-        end
-    end
-
-    if any(reset_u_flag)
-        fprintf('[reset_u:');
-        for k = find(reset_u_flag)
-            fprintf(' %d', k);
-        end
-        fprintf(']');
-    end
+%     %% Check whether or not the scaled dual variables (u) need to be reset
+%     % u_i is reset for every mode which has failed to decrease its physics 
+%     % residual.
+%     reset_u_flag = false * ones(N, 1);
+%     for k = 1 : N
+%         new_physics_residual{k} = pres(k).A(z) * x{k} - pres(k).b(z);
+%         if norm(new_physics_residual{k}) > norm(physics_residuals{k})
+%             u{k} = zeros(size(u{k})); % Reset this mode's u to zero.
+%             reset_u_flag(k) = true;
+%         end
+%     end
+% 
+%     if any(reset_u_flag)
+%         fprintf('[reset_u:');
+%         for k = find(reset_u_flag)
+%             fprintf(' %d', k);
+%         end
+%         fprintf(']');
+%     end
 
 
     %% Form Q(z) = 1/2 || Pz - q ||^2
@@ -281,7 +281,6 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     state.newton_success = newton_success;
     state.newton_progress = progress;
 
-    state.phi = phi;
     state.x = x;
     state.u = u;
     state.update_u = update_u;

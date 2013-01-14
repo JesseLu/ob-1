@@ -5,6 +5,11 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
     N = length(opt_prob);
 
     persistent progress
+
+    if ~isempty(varargin)
+        progress = varargin{1};
+    end
+
     if (k == 1)  
         for i = 1 : N
             empty_cells{i} = [];
@@ -23,7 +28,19 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
         modes = verification_layer(opt_prob, z, x);
     end
 
-    progress.iters(end+1) = k;
+%     if isstruct(progress)
+%         if k < length(progress.iters) % Need to cut things down to size...
+%             progress.iters = progress.iters(1:k);
+%             progress.struct_obj = progress.struct_obj(1:k);
+%             for i = 1 : N
+%                 progress.out_power{i} = progress.out_power{i}(:,1:k);
+%                 progress.out_angle{i} = progress.out_angle{i}(:,1:k);
+%                 progress.res_norm{i} = progress.res_norm{i}(:,1:k);
+%             end
+%         end
+%     end
+
+    progress.iters(k) = k;
     progress.struct_obj(k) = struct_obj.w(p);
     for i = 1 : N
         progress.out_power{i}(:,k) = modes(i).output_power(:,2);

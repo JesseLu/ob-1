@@ -15,7 +15,9 @@ function custom_lineplot(plot_fun, x, y, mode_sel)
         hold on 
         if any(i == mode_sel)
             for j = 1 : size(y{i}, 1)
-                plot_fun(x, y{i}(j,:), my_linestyle(i,j), 'MarkerSize', 8);
+                plot_fun(x, y{i}(j,:), my_linestyle(i,j), 'MarkerSize', 2);
+                plot_fun(x(end), y{i}(j,end), my_linestyle(i,j), ...
+                            'MarkerSize', 8);
             end
         end
     end
