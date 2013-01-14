@@ -81,6 +81,13 @@ function [opt_prob, J, E_out] = translate_mode(mode, solver)
         [~, E_out{j}] = solve_waveguide_mode(omega, s_prim, s_dual, ...
                                        mu, epsilon, ...
                                        out.pos, out.dir, out.mode_num);
+        
+        % Zero-out the E_out modes that do not contribute 
+        % to the Poynting vector.
+        zero_out_ind = find(out.dir(1) == 'xyz');
+        E_out{j}{zero_out_ind} = 0 * E_out{j}{zero_out_ind};
+
+        % Linear algebra-ize.
         C(:,j) = vec(E_out{j}); % Vectorize
         alpha(j,1) = sqrt(out.power(1)) * norm(C(:,j))^2; % Scale.
         beta(j,1) = sqrt(out.power(2)) * norm(C(:,j))^2;

@@ -4,7 +4,8 @@
 %% Description
 %
 
-function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargin)
+function [opt_prob, E_out] = example(paradigm, S_type, update_scheme, ...
+                                        num_iters, err_thresh, varargin)
 
     %% Source code
     path(path, genpath('.'));
@@ -63,7 +64,7 @@ function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargi
     delta = 1e-1;
     modes(1) = struct('omega', omega, ...
                     'in', wg(1, 11, 'x+', 2), ...
-                    'out', [wg([0 delta], 69, 'x+', 2)], ...
+                    'out', [wg([1-delta 1], 69, 'x+', 2)], ...
                     's_prim', {s_prim}, ...
                     's_dual', {s_dual}, ...
                     'mu', {mu}, ...
@@ -124,8 +125,9 @@ function example(paradigm, S_type, update_scheme, num_iters, err_thresh, varargi
                                         state, progress);
 
 
-    %% Visualize.
-    % track_progress(opt_prob, struct_obj, 1, num_iters+1, [], z, p);
+%     %% Visualize.
+%     track_progress(opt_prob, struct_obj, vis_layer, mode_sel, ...
+%                     num_iters+1, [], z, p);
 
 end % End example function.
 
