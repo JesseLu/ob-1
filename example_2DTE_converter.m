@@ -1,11 +1,12 @@
 %% example
-% A simple example of an optimization.
+% A simple example of an optimization (2D).
 
 %% Description
-%
+% Optimization, in 2D TE mode, of a waveguide mode converter.
 
 function [vis_result] = example(paradigm, S_type, update_scheme, ...
                                         num_iters, err_thresh, varargin)
+    help example_2DTE_converter
 
     %% Source code
     path(path, genpath('.'));
