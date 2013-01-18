@@ -1,22 +1,20 @@
-%% example_2DTE_converter
-% A simple example of an optimization (2D).
-
-%% Description
-% Optimization, in 2D TE mode, of a waveguide mode converter.
+%% example_3D
+% A simple example of an optimization in 3D!
 
 function [vis_result] = example(paradigm, S_type, update_scheme, ...
                                         num_iters, err_thresh, varargin)
-    help example_2DTE_converter
+    help example_3D
 
     %% Source code
     path(path, genpath('.'));
     %% Hard-coded constants.
-    omega = 0.16;
-    dims = [60 60 1];
+    omega = 0.08;
+    dims = [60 60 40];
     z_thickness = 10;
     z_center = dims(3)/2;
     eps_lo = 1.5;
-    eps_hi = 13;
+    eps_hi = 17;
+    wg_thickness = 17;
 
 
     %% Build up the base structure.
@@ -31,7 +29,7 @@ function [vis_result] = example(paradigm, S_type, update_scheme, ...
                         'permittivity', eps_lo), ...
                 struct('type', 'rectangle', ...
                         'position', [0 0], ...
-                        'size', [1e9 13], ...
+                        'size', [1e9 wg_thickness], ...
                         'permittivity', eps_hi)};
 
     epsilon_0 = add_planar(epsilon, z_center, z_thickness, my_shapes); 
@@ -40,7 +38,7 @@ function [vis_result] = example(paradigm, S_type, update_scheme, ...
 
     % Build the selection matrix, and reset values of epsilon.
     [S, epsilon] = planar_selection_matrix(S_type, epsilon_0, ...
-                                        {[12 24], [48 37]}, eps_lo, ...
+                                        {[12 22], [48 39]}, eps_lo, ...
                                         z_center, z_thickness);
 
 
@@ -64,7 +62,7 @@ function [vis_result] = example(paradigm, S_type, update_scheme, ...
 
     delta = 1e-2;
     modes(1) = struct('omega', omega, ...
-                    'in', wg(1, 11, 'x+', 2), ...
+                    'in', wg(1, 11, 'x+', 4), ...
                     'out', [wg([1-delta 2], 49, 'x+', 4), ...
                             wg([0 delta], 49, 'x+', 2)], ...
                     's_prim', {s_prim}, ...
@@ -84,8 +82,8 @@ function [vis_result] = example(paradigm, S_type, update_scheme, ...
 
 
     %% Translate
-    [opt_prob, J, E_out] = translation_layer(modes, @solve_local);
-    % test_opt_prob(opt_prob, S); % Use to test opt_prob.
+    [opt_prob, J, E_out] = translation_layer(modes, @solve_maxwellFDS);
+    test_opt_prob(opt_prob, S); % Use to test opt_prob.
 
     %% Optimize
     p0 = struct_obj.p_range(:,2);
@@ -150,11 +148,11 @@ function test_opt_prob(opt_prob, S)
                                     (pr.B(x)*z-pr.d(x)));  
 
         cb1 = opt_prob(i).solve_A(z, x);
-        cb2 = opt_prob(i).solve_A_dagger(z, x);
+        % cb2 = opt_prob(i).solve_A_dagger(z, x);
         done = [false false];
         while ~all(done)
             [~, done(1)] = cb1();
-            [~, done(2)] = cb2();
+            % [~, done(2)] = cb2();
         end
         solve_A_error(i) = norm(pr.A(z) * cb1() - x);
         solve_A_dagger_error(i) = norm(pr.A(z)' * cb2() - x);
