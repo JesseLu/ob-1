@@ -8,7 +8,7 @@ function [vis_result] = example(paradigm, S_type, update_scheme, ...
     %% Source code
     path(path, genpath('.'));
     %% Hard-coded constants.
-    omega = 0.08;
+    omega = 0.16;
     dims = [60 60 40];
     z_thickness = 10;
     z_center = dims(3)/2;
@@ -83,7 +83,7 @@ function [vis_result] = example(paradigm, S_type, update_scheme, ...
 
     %% Translate
     [opt_prob, J, E_out] = translation_layer(modes, @solve_maxwellFDS);
-    test_opt_prob(opt_prob, S); % Use to test opt_prob.
+    % test_opt_prob(opt_prob, S, struct_obj); % Use to test opt_prob.
 
     %% Optimize
     p0 = struct_obj.p_range(:,2);
@@ -133,29 +133,30 @@ function [vis_result] = example(paradigm, S_type, update_scheme, ...
 end % End example function.
 
 
-function test_opt_prob(opt_prob, S)
+function test_opt_prob(opt_prob, S, struct_obj)
 % Tests the opt_prob structure.
 
     % Test opt_prob.
     n = size(S, 1);
     l = size(S, 2);
     x = randn(n, 1) + 1i * randn(n, 1);
-    z = randn(l, 1) + 1i * randn(l, 1);
+    z = struct_obj.m(struct_obj.p_range(:,2));
 
     for i = 1 : length(opt_prob)
         pr = opt_prob(i).phys_res;
         phys_res_error(i) = norm(pr.A(z)*x-pr.b(z) - ...
                                     (pr.B(x)*z-pr.d(x)));  
 
-        cb1 = opt_prob(i).solve_A(z, x);
-        % cb2 = opt_prob(i).solve_A_dagger(z, x);
+        b = pr.b(z);
+        cb1 = opt_prob(i).solve_A(z, b);
+        cb2 = opt_prob(i).solve_A_dagger(z, b);
         done = [false false];
         while ~all(done)
             [~, done(1)] = cb1();
-            % [~, done(2)] = cb2();
+            [~, done(2)] = cb2();
         end
-        solve_A_error(i) = norm(pr.A(z) * cb1() - x);
-        solve_A_dagger_error(i) = norm(pr.A(z)' * cb2() - x);
+        solve_A_error(i) = norm(pr.A(z) * cb1() - b) / norm(b);
+        solve_A_dagger_error(i) = norm(pr.A(z)' * cb2() - b) / norm(b);
         fprintf('opt_prob_test [pr: %e, sA: %e, sAd: %e]\n', ...
                                             phys_res_error(i), ...
                                             solve_A_error(i), ...

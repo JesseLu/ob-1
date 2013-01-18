@@ -40,7 +40,11 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
 %         end
 %     end
     if isempty(k)
-        k = length(progress.iters) + 1;
+        if isempty(progress)
+            k = 1;
+        else
+            k = length(progress.iters) + 1;
+        end
     end
 
     progress.iters(k) = k;
