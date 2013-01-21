@@ -1,6 +1,5 @@
 function vis_newton_progress(progress, mode_sel)
-    figure(7); 
-    subplot 111;
+    subplot(2, 6, 6+5);
     for i = 1 : length(progress)
         data{i} = [progress{i}(:).newton_dec];
     end

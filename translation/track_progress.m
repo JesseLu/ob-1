@@ -57,41 +57,36 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
     end
 
     % Visualize epsilon.
-    figure(1); title('epsilon');
     % subplot 111; imagesc(modes(mode_sel(1)).epsilon{G}'); axis equal tight;
-    subplot 111; 
+    subplot(2, N+1, 1); 
+    title('epsilon');
     my_vis_slice(modes(mode_sel(1)).epsilon, vis_layer, @real);
 
     % Visualize certain fields.
-    figure(2);
     for i = mode_sel
-        subplot(N, 1, i); 
+        subplot(2, N+1, i+1); 
         my_vis_slice(modes(mode_sel(i)).E, vis_layer, @abs);
         title(['Mode ', num2str(i)]);
     end
 
     
     % Field design objective (power).
-    figure(3); 
-    subplot 141
+    subplot(2, 6, 6+1);
     custom_lineplot(@plot, progress.iters, progress.out_power, mode_sel);
     title('Output powers');
 
     % Field design objective (angle).
-    % figure(4);
-    subplot 142
+    subplot(2, 6, 6+2);
     custom_lineplot(@plot, progress.iters, progress.out_degrees, mode_sel);
     title('Output angles');
 
     % Structure design objective.
-    % figure(5);
-    subplot 143
+    subplot(2, 6, 6+3);
     custom_lineplot(@semilogy, progress.iters, progress.res_norm, mode_sel);
     title('Physics residuals');
 
     % Physics residual.
-    % figure(6);
-    subplot 144
+    subplot(2, 6, 6+4);
     plot(progress.struct_obj, 'k.-');
     title('Structure objective');
 

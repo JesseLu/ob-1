@@ -238,14 +238,14 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
                                 Ct{k}'*Ct{k}) * (Ct{k}' * v));
     end
 
-%     % Wrap everything up into cell arrays.
-%     for k = 1 : N
-%         f{k} = @(x) compute_f(x, k);
-%         grad{k} = @(x) compute_grad(x, k);
-%         multHess{k} = @(x, v) mult_Hess(x, v, k);
-%         abridged_grad{k} = @(x) compute_abridged_grad(x, k);
-%         multM{k} = @(x, v) mult_M(x, v, k);
-%     end
+    % Wrap everything up into cell arrays.
+    for k = 1 : N
+        f{k} = @(x) compute_f(x, k);
+        grad{k} = @(x) compute_grad(x, k);
+        multHess{k} = @(x, v) mult_Hess(x, v, k);
+        abridged_grad{k} = @(x) compute_abridged_grad(x, k);
+        multM{k} = @(x, v) mult_M(x, v, k);
+    end
 
 
     %% Execute Newton's algorithm
