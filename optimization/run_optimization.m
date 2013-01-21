@@ -8,8 +8,7 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
     %% Set up logging.
     options = check_file_names(options);
     log_state = @() save(options.state_file, ...
-                        'k', 'opt_prob', 'g', 'z', 'p', ...
-                        'state', 'options', 'progress');
+                        'k', 'z', 'p', 'state', 'progress');
     log_history = @(k, x, z, p) history_logger(options.history_file, ...
                                         {opt_prob.get_epsilon}, k, x, z, p);
     
