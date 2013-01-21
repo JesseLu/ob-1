@@ -38,8 +38,8 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         state = struct( 't', 1e3, ...
                         'rho', 10, ...
                         'newton_err_thresh', 1e-6, ...
-                        'newton_max_steps', 20, ...
-                        'line_search_err_thresh', 1e-9, ...
+                        'newton_max_steps', 10, ...
+                        'line_search_err_thresh', 1e-4, ...
                         'vis_progress', @default_vis_progress, ...  
                         'x', {x_default}, ...
                         'u', {u_default}, ...
@@ -132,6 +132,9 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
 
 
     %% Compose objective, gradient, and Hessian functional forms
+    % This is the old way that we used to use to do it,
+    % but it suffered from horrible overheads (~99%)
+    % because of the use of anonymous functions.
     for k = 1 : N
         alpha = fobj(k).alpha;
         a0 = (alpha ~= 0); % Used to cancel lower barrier if alpha is 0.
@@ -165,10 +168,85 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         % Forms needed for efficient calculation of the Newton step.
         abridged_grad{k} = @(x) (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
         multM{k} = @(x, v) v - ...
-                    Ct{k} * (inv((diag(rho*t./s{k}(x))) + Ct{k}'*Ct{k}) * (Ct{k}' * v));
-
-
+                    Ct{k} * (inv((diag(rho*t./s{k}(x))) + ...
+                                Ct{k}'*Ct{k}) * (Ct{k}' * v));
     end
+
+    % This is the faster way.
+
+    % Compute the r coefficients, which are used in the gradient calculation.
+    function [r] = compute_r(x, k)
+        a0 = (fobj(k).alpha ~= 0); % Used to cancel lower barrier if alpha is 0.
+        phi = angle(fobj(k).C' * x);
+        r = a0 .* -exp(1i*phi)./ (real(exp(-1i*phi).*(fobj(k).C'*x)) - ...
+                        fobj(k).alpha) + ...
+                    2 * (fobj(k).C'*x)./(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2);
+    end
+
+    % Compute the s coefficients, which are used in the Hessian calculation.
+    function [s] = compute_s(x, k)
+        a0 = (fobj(k).alpha ~= 0); 
+        phi = angle(fobj(k).C' * x);
+        s = a0.*1./(real(exp(-1i*phi).*(fobj(k).C'*x)) - fobj(k).alpha).^2 + ...
+            2./(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2) + ...
+            4*abs(fobj(k).C'*x).^2./(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2).^2;
+    end
+
+    % Compute the function value.
+    function [f] = compute_f(x, k)
+        a0 = (fobj(k).alpha ~= 0);
+        phi = angle(fobj(k).C' * x);
+        f = rho/2 * norm(pres(k).A(z)*x - pres(k).b(z) + u{k})^2 + ...
+                    -1/t * sum(ln(real(exp(-1i*phi).*(fobj(k).C'*x)) - ...
+                                    fobj(k).alpha, a0) + ...
+                                ln(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2));
+    end
+
+    % Precomputation to speed up the gradient calculation.
+    for k = 1 : N
+        grad_precompute_vector{k} = rho * pres(k).A(z)' * (-pres(k).b(z) + u{k});
+        grad_precompute_matrix{k} = rho * pres(k).A(z)' * pres(k).A(z);
+    end
+
+    % Compute the gradient.
+    function [grad] = compute_grad(x, k)
+        a0 = (fobj(k).alpha ~= 0);
+        phi = angle(fobj(k).C' * x);
+        r = a0 .* -exp(1i*phi)./ ...
+                    (real(exp(-1i*phi).*(fobj(k).C'*x)) - fobj(k).alpha) + ...
+                    2*(fobj(k).C'*x)./(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2);
+        grad = grad_precompute_matrix{k} * x + grad_precompute_vector{k} + ...
+                    1/t * fobj(k).C * r;
+    end
+
+    % Multiplication with the Hessian.
+    function [result] = mult_Hess(x, v, k)
+        result = rho * pres(k).A(z)' * (pres(k).A(z) * v) + ...
+                    1/t * (fobj(k).C * diag(compute_s(x, k))*(fobj(k).C' * v));
+    end
+
+    % Computation of the abridged gradient, for efficient computation of 
+    % the Newton step.
+    function [ag] = compute_abridged_grad(x, k)
+        ag = pres(k).A(z)*x - pres(k).b(z) + u{k} + ...
+                1/(rho*t) * Ct{k} * compute_r(x, k);
+    end
+
+    % Multiplication with M, for efficiently computing the Newton step as well.
+    function [result] = mult_M(x, v, k)
+        result = v - Ct{k} * (inv((diag(rho*t./compute_s(x, k))) + ...
+                                Ct{k}'*Ct{k}) * (Ct{k}' * v));
+    end
+
+    % Wrap everything up into cell arrays.
+    for k = 1 : N
+        f{k} = @(x) compute_f(x, k);
+        grad{k} = @(x) compute_grad(x, k);
+        multHess{k} = @(x, v) mult_Hess(x, v, k);
+        abridged_grad{k} = @(x) compute_abridged_grad(x, k);
+        multM{k} = @(x, v) mult_M(x, v, k);
+    end
+
 
     %% Execute Newton's algorithm
     % Minimize using Newton's method.
@@ -284,6 +362,9 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     state.x = x;
     state.u = u;
     state.update_u = update_u;
+
+    % For computational efficiency, don't save this function handle.
+    state = rmfield(state, 'vis_progress'); 
 
 end % End of prodQ_global function.
 

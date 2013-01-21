@@ -45,7 +45,9 @@ function [opt_prob, J, E_out] = translate_mode(mode, solver)
     unvec = @(v) {reshape(v(1:n), dims), ...
                     reshape(v(n+1:2*n), dims), ...
                     reshape(v(2*n+1:3*n), dims)};
-    my_diag = @(u) spdiags(u(:), 0, numel(u), numel(u));
+    function [D] = my_diag(u)
+        D = spdiags(u(:), 0, numel(u), numel(u));
+    end
 
     %% 
     % Compose the physics residual.
@@ -62,13 +64,19 @@ function [opt_prob, J, E_out] = translate_mode(mode, solver)
     [A1, A2, m, e, b] = maxwell_matrices(omega, s_prim, s_dual, ...
                                             mu, epsilon, J);
 
+    % Precomputation, to speed things up (slightly).
+    A_precompute = A1 * my_diag(1./m) * A2;
 
-    phys_res = struct(  'A', @(z) A1 * my_diag(1./m) * A2 - ...
-                                    omega^2 * my_diag(e + S * z), ...
+    % Nested function instead of anonymous function, for efficiency.
+    function [A] = compute_A(z)
+        A = A_precompute - omega^2 * my_diag(e + S * z);
+    end
+
+    % Form the physics residual.
+    phys_res = struct(  'A', @compute_A, ...
                         'b', @(z) b, ...
                         'B', @(x) - omega^2 * my_diag(x) * S, ...
-                        'd', @(x) b - (A1 * my_diag(1./m) * A2 - ...
-                                    omega^2 * my_diag(e)) * x);
+                        'd', @(x) b - A_precompute * x - omega^2 * e .* x);
 
 
     %%
