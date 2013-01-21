@@ -82,7 +82,7 @@ function [vis_result] = example(paradigm, S_type, update_scheme, ...
 
 
     %% Translate
-    [opt_prob, J, E_out] = translation_layer(modes, @solve_maxwellFDS);
+    [opt_prob, J, E_out] = translation_layer(modes, @solve_maxwell);
     % test_opt_prob(opt_prob, S, struct_obj); % Use to test opt_prob.
 
     %% Optimize

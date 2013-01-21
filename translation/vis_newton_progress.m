@@ -6,6 +6,8 @@ function vis_newton_progress(progress, mode_sel)
     custom_lineplot(@semilogy, [], data, mode_sel);
     title('Convergence of Newton Method');
     drawnow
+
+    subplot(2, 6, 6+6);
 end
 
 

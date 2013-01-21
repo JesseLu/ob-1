@@ -93,6 +93,8 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
     drawnow
 
     progress_out = progress;
+
+    subplot (2, 6, 6+6);
 end
 
 function my_vis_slice(data, vis_layer, fun)
