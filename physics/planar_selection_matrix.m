@@ -74,8 +74,8 @@ function [S, epsilon] = planar_selection_matrix(type, epsilon, ...
     % and then formed into a sparse column matrix which is concatenated to S.
 
     S = [];
-    for i = sel{1}(1) : sel{2}(1)
-        for j = sel{1}(2) : sel{2}(2)
+    for j = sel{1}(2) : sel{2}(2)
+        for i = sel{1}(1) : sel{2}(1)
 
             % Always include the z-component.
             ind = pos2ind(i, j, z_ind{3}, 3);
