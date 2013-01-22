@@ -25,7 +25,8 @@ function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
     err_lo = calc_err(grad_lo);
 
     if err_lo >= 0 % Not a descent direction!
-        error('Search direction is not a descent direction.');
+        warning('Search direction is not a descent direction.');
+        % error('Search direction is not a descent direction.');
     end
 
     %% Find step size interval 
