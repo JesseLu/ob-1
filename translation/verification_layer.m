@@ -46,7 +46,7 @@ function [modes] = verification_layer(opt_prob, z, varargin)
 
         % Calculate the physics residual.
         pr = opt_prob(i).phys_res;
-        modes(i).phys_res_norm = norm(pr.A(z) * x{i} - pr.b(z));
+        modes(i).phys_res_norm = norm(pr.A(z) * x{i} - pr.b(z)) / norm(pr.b(z));
 
         % Get epsilon.
         modes(i).epsilon = opt_prob(i).get_epsilon(z);
