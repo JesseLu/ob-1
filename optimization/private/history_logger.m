@@ -14,7 +14,6 @@ function history_logger(filename, get_epsilon, index, x, z, p)
         unvec{k} = @(u) reshape(u, dims);
     end
 
-    index
     if index == 1 % Assume file and datasets does not yet exist, so create it.
 
         % Delete the file if it currently exists.
