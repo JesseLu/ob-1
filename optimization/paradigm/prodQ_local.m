@@ -19,7 +19,10 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
     invAd = {opt_prob.solve_A_dagger};
 
     % Determine the current state of the optimization.
+    state_was_empty = false;
     if isempty(state) % No previous state, use the default state.
+        state_was_empty = true;
+
         state.kappa = 1 / 1.1; % Default value for kappa.
         state.kappa_growth_rate = 1.1; % Percent increase for a successful step.
         state.kappa_shrink_rate = 0.5; % Percent decrease for a failed step.
@@ -27,6 +30,9 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         % Default values for the relaxed field objective.
         state.a = 1;
         state.p = 2;
+
+        % Default visualization function.
+        state.vis_progress = @default_vis_progress;
         
         state.f = nan;
         state.F = Inf;
@@ -40,7 +46,11 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
     end
 
     % Obtain state parameters.
-    kappa = state.kappa;
+    if state_was_empty
+        kappa = state.initial_kappa;
+    else
+        kappa = state.kappa;
+    end
     kappa_growth_rate = state.kappa_growth_rate;
     kappa_shrink_rate = state.kappa_shrink_rate;
    
@@ -203,6 +213,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
     P = speye(length(grad_F));
     q = z - kappa * grad_F;
 
+    kappa
     
     %% Update state
 
@@ -218,5 +229,11 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
                     'z', z, ...
                     'prev_step_successful', prev_step_successful);
 
+    
 
 end % End of prodQ_local function.
+
+function default_vis_progress(kappa)
+% Print progress.
+    fprintf('%e ', kappa);
+end % End of default_vis_progress function.

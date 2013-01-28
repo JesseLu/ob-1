@@ -58,7 +58,12 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     newton_max_steps = state.newton_max_steps;
     newton_err_thresh = state.newton_err_thresh; 
     line_search_err_thresh = state.line_search_err_thresh;
-    vis_progress = state.vis_progress;
+
+    if isfield(state, 'vis_progress')
+        vis_progress = state.vis_progress;
+    else
+        vis_progress = @default_vis_progress;
+    end
  
     x = state.x;
     u = state.u;
