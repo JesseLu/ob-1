@@ -6,6 +6,10 @@ function [callback] = solve_local(omega, s_prim, s_dual, mu, epsilon, J)
     dims = size(epsilon{1});
     n = prod(dims);
 
+    if n < 3 && ~any(dims == 1) % Don't accept 3D simulations...
+        error('3D simulations not accepted.');
+    end
+
 
     %% Form matrices and solve
     % We now form the necessary linear algebra components and solve the system 
