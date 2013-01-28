@@ -28,7 +28,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         state.kappa_shrink_rate = 0.5; % Percent decrease for a failed step.
 
         % Default values for the relaxed field objective.
-        state.a = 1;
+        state.a = @(fvals) max(cell2mat(fvals));
         state.p = 2;
 
         % Default visualization function.
@@ -46,11 +46,12 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
     end
 
     % Obtain state parameters.
-    if state_was_empty
+    if state_was_empty % Allow for an initial_kappa setting.
         kappa = state.initial_kappa;
     else
         kappa = state.kappa;
     end
+
     kappa_growth_rate = state.kappa_growth_rate;
     kappa_shrink_rate = state.kappa_shrink_rate;
    
@@ -125,23 +126,30 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         beta = fobj(k).beta;
         C = fobj(k).C;
 
-        f{k} = 1/a * f_viol(alpha, beta, C, x{k}).^p;
-        df_dx{k} = sum((p/a) * diag(f_viol(alpha, beta, C, x{k}).^(p-1)) ...
+        f{k} = 1 * f_viol(alpha, beta, C, x{k}).^p;
+        df_dx{k} = sum((p) * diag(f_viol(alpha, beta, C, x{k}).^(p-1)) ...
                             * df_viol_dx(alpha, beta, C, x{k}), 1);
     end
-    
+
     % Compute the overall value of the design objective.
     F = 0;
     for k = 1 : N
         F = F + sum(f{k});
     end
-
+    
+%     % Re-scale with respect to the a() function.
+%     scale_factor = 1 / a(f);
+%     for k = 1 : N
+%         f{k} = scale_factor * f{k};
+%         df_dx{k} = scale_factor * df_dx{k};
+%     end
+% 
     %% Compute grad_F
     % If previous step failed, simply use the previous value of grad_F.
 
     % First check if previous step succeeded or failed.
 
-    if F < prev_F % Previous step succeeded.
+    if F <= prev_F % Previous step succeeded.
         prev_step_successful = true;
 
         % Update kappa and recompute grad_F.
@@ -210,10 +218,16 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
     % $$ Q(z) = \frac{1}{2}\|z - z_0\|^2 + \kappa \nabla_z F^\dagger (z - z_0) 
     %   = \frac{1}{2}\|z - (z_0 - \kappa \nabla_z F)\|^2 + \mbox{const.} $$
 
-    P = speye(length(grad_F));
-    q = z - kappa * grad_F;
+    if F ~= 0 
+        grad_F_scaled = 1/a(f) * grad_F;
+        P = speye(length(grad_F_scaled));
+        q = z - kappa * grad_F_scaled;
+    else
+        P = nan;
+        q = nan;
+    end
 
-    kappa
+    default_vis_progress(kappa, prev_step_successful);
     
     %% Update state
 
@@ -233,7 +247,10 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
 
 end % End of prodQ_local function.
 
-function default_vis_progress(kappa)
+function default_vis_progress(kappa, prev_step_successful)
 % Print progress.
-    fprintf('%e ', kappa);
+    fprintf(' [kappa: %1.2e]', kappa);
+    if ~prev_step_successful
+        fprintf(' [kappa_shrink]');
+    end
 end % End of default_vis_progress function.

@@ -43,25 +43,24 @@ function [z, p] = update_structure(P, q, g, p0, varargin)
             f_prev = f(p);
             err = [];
 
-            % Accept any forced parameters contained in varargin.
+            % Default options.
             options = struct('max_iters', 10, ...
                             'err_thresh', 1e-5, ...
                             'step_err', 1e-4, ...
-                            'max_grad_mag', 1e3);
+                            'subplot_select', @() subplot(2, 6, 6+5));
+
+            % Accept any forced parameters contained in varargin.
             for k = 2 : 2 : length(varargin)
                 options = setfield(options, varargin{k-1}, varargin{k});
             end
-            options
            
             for k = 1 : options.max_iters 
                 % Empirically find gradient.
                 dp = get_gradient(@(p) f_uncomp(p), p)';
 
-                ind = find(abs(dp(:)) > options.max_grad_mag);
-                dp(ind) = options.max_grad_mag * dp(ind) ./ abs(dp(ind));
-
                 % Plot error.
                 err(end+1) = norm(filter_grad(dp, p));
+                options.subplot_select();
                 semilogy(err, '.-');
                 title('Filtered gradient norm');
                 drawnow
@@ -72,7 +71,7 @@ function [z, p] = update_structure(P, q, g, p0, varargin)
                 end
 
                 % Perform line search.
-                optim_step = line_search_brute(f, -dp, p, options.step_err)
+                optim_step = line_search_brute(f, -dp, p, options.step_err);
 
                 if optim_step == 0 % If no step, we're done.
                     break

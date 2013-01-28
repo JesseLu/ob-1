@@ -28,6 +28,7 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
     log_state(); % Log initial state.
     vp_state = [];
 
+    termination_flag = false; % Delayed termination for local paradigm.
 
     %% Run optimization
     for k = options.starting_iter : options.num_iters
@@ -37,6 +38,11 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
         if strcmp(options.paradigm, 'local')
             [P, q, state] = prodQ_local(z, opt_prob, state, ...
                                         options.paradigm_args{:});
+
+            % Detect termination condition.
+            if state.F == 0
+                termination_flag = true;
+            end
                                     
         elseif strcmp(options.paradigm, 'global')
             % Detect termination condition.
@@ -62,7 +68,9 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
         end
 
         % Update the structure variable.
-        [z, p] = update_structure(P, q, g, p, options.structure_args{:});  
+        if ~termination_flag % Only if not terminated.
+            [z, p] = update_structure(P, q, g, p, options.structure_args{:});  
+        end
 
         % Log and visualize.
         progress = options.vis_progress(k, state.x, z, p, progress);
@@ -70,6 +78,10 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
         log_history(k, state.x, z, p); % Do this last, in case hdf5 calls fail.
 
         fprintf('\n');
+
+        if termination_flag% Termination for local paradigm.
+            break
+        end
     end
 end % End run_optimization function.
 

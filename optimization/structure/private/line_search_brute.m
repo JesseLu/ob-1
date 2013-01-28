@@ -26,7 +26,7 @@ function [optim_step] = line_search_convex(f, dx, x0, step_err)
     end
 
     % "Ten-sect" to find the optimal step to within step_err.
-    norm_dx = norm(dx)
+    norm_dx = norm(dx);
     while (step_max - step_min) > step_err/norm_dx
         ds = (step_max - step_min) / 10;
         new_steps = [step_min:ds:step_max, step_max];
