@@ -36,7 +36,7 @@ function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
 
     step_size = 1; % Always guess 1 first, in case delta_x is the Newton step.
         
-    while step_size < 1e6 % Don't step bigger than this.
+    while step_size < 1e9 % Don't step bigger than this.
         f_next = f(x + step_size * delta_x);
         grad_next = grad(x + step_size * delta_x);
         err_next = calc_err(grad_next);
