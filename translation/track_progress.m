@@ -118,4 +118,5 @@ function my_vis_slice(data, vis_layer, fun)
         imagesc(data');
     end
     axis equal tight;
+    set(gca, 'Ydir', 'normal');
 end
