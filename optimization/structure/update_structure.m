@@ -181,6 +181,15 @@ function [z, p] = update_structure(P, q, g, p0, varargin)
             error('Invalid scheme for structure design objective.');
     end
 
+
+    % See if there is a tidyup_p function
+    options.tidyup_p = @(p) p;
+    for k = 2 : 2 : length(varargin)
+        options = setfield(options, varargin{k-1}, varargin{k});
+    end
+    p = options.tidyup_p(p);
+
+
 end % End update_structure function.
 
 
