@@ -300,7 +300,9 @@ function [A, get_wg_fields] = wg_operator(omega, s_prim, s_dual, epsilon, mu, ..
                 dot(real(s_prim_y(:)).*real(s_dual_x(:)).*-e(n+1:2*n), h(1:n)))^-0.5;
 
         % Use the element of the E-field with largest magnitude as a phase reference.
+        % Actually, only use the first element...
         [~, ind] = max(abs(e));
+        ind = 1;
         norm_angle = -angle(e(ind));
 
         % The combined normalization factor.

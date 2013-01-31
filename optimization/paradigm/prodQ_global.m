@@ -35,7 +35,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
             end
         end
 
-        state = struct( 't', 1e3, ...
+        state = struct( 't_vals', 10.^[1:3], ...
                         'rho', 10, ...
                         'newton_err_thresh', 1e-3, ...
                         'newton_max_steps', 10, ...
@@ -53,7 +53,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     end
 
     % Obtain state parameters.
-    t = state.t;
+    t_vals = state.t_vals;
     rho = state.rho;
 
     newton_max_steps = state.newton_max_steps;
@@ -72,7 +72,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     dynamic_phi = state.dynamic_phi;
 
     % Check some parameters.
-    if t < 1
+    if any(t_vals) < 1
         error('Values of t less than 1 not accepted.');
     end
 
@@ -142,42 +142,43 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     % This is the old way that we used to use to do it,
     % but it suffered from horrible overheads (~99%)
     % because of the use of anonymous functions.
-    for k = 1 : N
-        alpha = fobj(k).alpha;
-        a0 = (alpha ~= 0); % Used to cancel lower barrier if alpha is 0.
-        beta = fobj(k).beta;
-        C = fobj(k).C;
-        phi{k} = angle(C' * x{k});
 
-        A = pres(k).A(z);
-        b = pres(k).b(z);
-   
-        % Scale factors used in gradient and Hessian.
-        r{k} = @(x) a0 .* -exp(i*phi{k})./ (real(exp(-i*phi{k}).*(C'*x)) - alpha) + ...
-                    2 * (C'*x)./(beta.^2 - abs(C'*x).^2);
-        s{k} = @(x) a0 .* 1./(real(exp(-i*phi{k}).*(C'*x)) - alpha).^2 + ...
-                    2./(beta.^2 - abs(C'*x).^2) + ...
-                    4 * abs(C'*x).^2./(beta.^2 - abs(C'*x).^2).^2;
-
-        % Function composition of the objective and its gradient and Hessian.
-        f{k} = @(x) rho/2 * norm(A*x - b + u{k})^2 + ...
-                    -1/t * sum(ln(real(exp(-i*phi{k}).*(C'*x)) - alpha, a0) + ...
-                                ln(beta.^2 - abs(C'*x).^2));
-        grad{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x); 
-        multHess{k} = @(x, v) rho * A' * (A * v) + ...
-                                1/t * (C * diag(s{k}(x)) * (C' * v));
-
-%         % Alternative function composition of gradient and Hessian using C tilde.
-%         grad{k} = @(x) rho * A' * (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
-%         Hess{k} = @(x) rho * A' * ...
-%                     (eye(n) + 1/(rho*t) * (Ct{k} * diag(s{k}(x)) * Ct{k}')) * A;
-
-        % Forms needed for efficient calculation of the Newton step.
-        abridged_grad{k} = @(x) (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
-        multM{k} = @(x, v) v - ...
-                    Ct{k} * (inv((diag(rho*t./s{k}(x))) + ...
-                                Ct{k}'*Ct{k}) * (Ct{k}' * v));
-    end
+%     for k = 1 : N
+%         alpha = fobj(k).alpha;
+%         a0 = (alpha ~= 0); % Used to cancel lower barrier if alpha is 0.
+%         beta = fobj(k).beta;
+%         C = fobj(k).C;
+%         phi{k} = angle(C' * x{k});
+% 
+%         A = pres(k).A(z);
+%         b = pres(k).b(z);
+%    
+%         % Scale factors used in gradient and Hessian.
+%         r{k} = @(x) a0 .* -exp(i*phi{k})./ (real(exp(-i*phi{k}).*(C'*x)) - alpha) + ...
+%                     2 * (C'*x)./(beta.^2 - abs(C'*x).^2);
+%         s{k} = @(x) a0 .* 1./(real(exp(-i*phi{k}).*(C'*x)) - alpha).^2 + ...
+%                     2./(beta.^2 - abs(C'*x).^2) + ...
+%                     4 * abs(C'*x).^2./(beta.^2 - abs(C'*x).^2).^2;
+% 
+%         % Function composition of the objective and its gradient and Hessian.
+%         f{k} = @(x) rho/2 * norm(A*x - b + u{k})^2 + ...
+%                     -1/t * sum(ln(real(exp(-i*phi{k}).*(C'*x)) - alpha, a0) + ...
+%                                 ln(beta.^2 - abs(C'*x).^2));
+%         grad{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x); 
+%         multHess{k} = @(x, v) rho * A' * (A * v) + ...
+%                                 1/t * (C * diag(s{k}(x)) * (C' * v));
+% 
+% %         % Alternative function composition of gradient and Hessian using C tilde.
+% %         grad{k} = @(x) rho * A' * (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
+% %         Hess{k} = @(x) rho * A' * ...
+% %                     (eye(n) + 1/(rho*t) * (Ct{k} * diag(s{k}(x)) * Ct{k}')) * A;
+% 
+%         % Forms needed for efficient calculation of the Newton step.
+%         abridged_grad{k} = @(x) (A*x - b + u{k} + 1/(rho*t) * Ct{k} * r{k}(x));
+%         multM{k} = @(x, v) v - ...
+%                     Ct{k} * (inv((diag(rho*t./s{k}(x))) + ...
+%                                 Ct{k}'*Ct{k}) * (Ct{k}' * v));
+%     end
 
     % This is the faster way.
     for k = 1 : N
@@ -207,7 +208,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     end
 
     % Compute the function value.
-    function [f] = compute_f(x, k)
+    function [f] = compute_f(x, t, k)
         a0 = (fobj(k).alpha ~= 0);
         if dynamic_phi
             f = rho/2 * norm(pres(k).A(z)*x - pres(k).b(z) + u{k})^2 + ...
@@ -229,38 +230,38 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     end
 
     % Compute the gradient.
-    function [grad] = compute_grad(x, k)
+    function [grad] = compute_grad(x, t, k)
         a0 = (fobj(k).alpha ~= 0);
         grad = grad_precompute_matrix{k} * x + grad_precompute_vector{k} + ...
                     1/t * fobj(k).C * compute_r(x, k);
     end
 
     % Multiplication with the Hessian.
-    function [result] = mult_Hess(x, v, k)
+    function [result] = mult_Hess(x, v, t, k)
         result = rho * pres(k).A(z)' * (pres(k).A(z) * v) + ...
                     1/t * (fobj(k).C * diag(compute_s(x, k))*(fobj(k).C' * v));
     end
 
     % Computation of the abridged gradient, for efficient computation of 
     % the Newton step.
-    function [ag] = compute_abridged_grad(x, k)
+    function [ag] = compute_abridged_grad(x, t, k)
         ag = pres(k).A(z)*x - pres(k).b(z) + u{k} + ...
                 1/(rho*t) * Ct{k} * compute_r(x, k);
     end
 
     % Multiplication with M, for efficiently computing the Newton step as well.
-    function [result] = mult_M(x, v, k)
+    function [result] = mult_M(x, v, t, k)
         result = v - Ct{k} * (inv((diag(rho*t./compute_s(x, k))) + ...
                                 Ct{k}'*Ct{k}) * (Ct{k}' * v));
     end
 
     % Wrap everything up into cell arrays.
     for k = 1 : N
-        f{k} = @(x) compute_f(x, k);
-        grad{k} = @(x) compute_grad(x, k);
-        multHess{k} = @(x, v) mult_Hess(x, v, k);
-        abridged_grad{k} = @(x) compute_abridged_grad(x, k);
-        multM{k} = @(x, v) mult_M(x, v, k);
+        f{k} = @(x, t) compute_f(x, t, k);
+        grad{k} = @(x, t) compute_grad(x, t, k);
+        multHess{k} = @(x, v, t) mult_Hess(x, v, t, k);
+        abridged_grad{k} = @(x, t) compute_abridged_grad(x, t, k);
+        multM{k} = @(x, v, t) mult_M(x, v, t, k);
     end
 
 
@@ -269,19 +270,20 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
 
     % Make sure we start with a feasible x.
     for k = 1 : N
-        if isinf(f{k}(x{k}))
+        if isinf(f{k}(x{k}, 1))
             error('Initial x is infeasible.');
         end
     end
 
     % Keeps track which modes have already been solved
     mode_done = false * ones(1, N);
+    t = t_vals(1) * ones(1, N);
 
     for j = 1 : newton_max_steps
         % Initialize the computation for the Newton step.
         unfinished_modes = find(~mode_done);
         for k = unfinished_modes
-            cb{k} = invA{k}(z, -multM{k}(x{k}, abridged_grad{k}(x{k})));
+            cb{k} = invA{k}(z, -multM{k}(x{k}, abridged_grad{k}(x{k}, t(k)), t(k)));
         end
 
         % Complete the Newton step computation.
@@ -295,30 +297,40 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         % Perform an iteration of the Newton algorithm.
         for k = unfinished_modes
             % Check the computation of the Newton step.
-            newton_step_error = norm(multHess{k}(x{k}, delta_x{k}) + grad{k}(x{k}));
+            newton_step_error = norm(multHess{k}(x{k}, delta_x{k}, t(k)) + ...
+                                        grad{k}(x{k}, t(k)));
+            % fprintf('%e ', newton_step_error/norm(delta_x{k}));
 
             % Calculate the Newton decrement.
-            lambda = sqrt(abs(real(grad{k}(x{k})' * -delta_x{k})));
+            lambda = sqrt(abs(real(grad{k}(x{k}, t(k))' * -delta_x{k})));
 
             % Perform a line search in the Newton step direction.
-            step_size = line_search_convex(f{k}, grad{k}, delta_x{k}, x{k}, ...
+            step_size = line_search_convex(@(x) f{k}(x, t(k)), ...
+                                            @(x) grad{k}(x, t(k)), ...
+                                            delta_x{k}, x{k}, ...
                                             line_search_err_thresh);
 
             % Update x.
             x{k} = x{k} + step_size * delta_x{k};
             
-            fprintf('%f\n', 180/pi*angle(fobj(k).C' * x{k}));
-
             % Record the action and metrics of the step.
-            progress{k}(j) = struct('fval', f{k}(x{k}), ...
-                                    'grad_norm', norm(grad{k}(x{k})), ...
+            progress{k}(j) = struct('fval', f{k}(x{k}, t(k)), ...
+                                    'grad_norm', norm(grad{k}(x{k}, t(k))), ...
                                     'newton_dec', lambda^2/2, ...
                                     'step_size', step_size, ...
-                                    'newton_step_err', newton_step_error);
+                                    'newton_step_err', newton_step_error, ...
+                                    't', t(k));
 
             % Check termination condition.
             if lambda^2/2 <= newton_err_thresh
-                mode_done(k) = true;
+                ind = find(t(k) == t_vals);
+                if ind == length(t_vals)
+                    fprintf('%f (%d)', 180/pi*angle(fobj(k).C(:,1)' * x{k}), j);
+
+                    mode_done(k) = true;
+                else
+                    t(k) = t_vals(ind+1);
+                end
             end
 
         end % End of mode iteration loop.
