@@ -30,6 +30,8 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
 
     termination_flag = false; % Delayed termination for local paradigm.
 
+    prev_p = p0; % prev_p is used to revert back to previous structure.
+
     %% Run optimization
     for k = options.starting_iter : options.num_iters
         fprintf('%2d:', k);
@@ -38,6 +40,11 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
         if strcmp(options.paradigm, 'local')
             [P, q, state] = prodQ_local(z, opt_prob, state, ...
                                         options.paradigm_args{:});
+
+            % Detect need to revert back to previous structure.
+            if ~state.prev_step_successful
+                p = prev_p;
+            end
 
             % Detect termination condition.
             if state.F == 0
@@ -69,6 +76,7 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
 
         % Update the structure variable.
         if ~termination_flag % Only if not terminated.
+            prev_p = p;
             [z, p] = update_structure(P, q, g, p, options.structure_args{:});  
         end
 
