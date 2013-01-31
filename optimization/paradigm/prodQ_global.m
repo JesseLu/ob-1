@@ -43,7 +43,8 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
                         'vis_progress', @default_vis_progress, ...  
                         'x', {x_default}, ...
                         'u', {u_default}, ...
-                        'update_u', false);
+                        'update_u', false, ...
+                        'dynamic_phi', false);
     end
 
     % Accept any forced parameters contained in varargin.
@@ -68,6 +69,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     x = state.x;
     u = state.u;
     update_u = state.update_u;
+    dynamic_phi = state.dynamic_phi;
 
     % Check some parameters.
     if t < 1
@@ -145,21 +147,21 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
         a0 = (alpha ~= 0); % Used to cancel lower barrier if alpha is 0.
         beta = fobj(k).beta;
         C = fobj(k).C;
-        phi = angle(C' * x{k});
+        phi{k} = angle(C' * x{k});
 
         A = pres(k).A(z);
         b = pres(k).b(z);
    
         % Scale factors used in gradient and Hessian.
-        r{k} = @(x) a0 .* -exp(i*phi)./ (real(exp(-i*phi).*(C'*x)) - alpha) + ...
+        r{k} = @(x) a0 .* -exp(i*phi{k})./ (real(exp(-i*phi{k}).*(C'*x)) - alpha) + ...
                     2 * (C'*x)./(beta.^2 - abs(C'*x).^2);
-        s{k} = @(x) a0 .* 1./(real(exp(-i*phi).*(C'*x)) - alpha).^2 + ...
+        s{k} = @(x) a0 .* 1./(real(exp(-i*phi{k}).*(C'*x)) - alpha).^2 + ...
                     2./(beta.^2 - abs(C'*x).^2) + ...
                     4 * abs(C'*x).^2./(beta.^2 - abs(C'*x).^2).^2;
 
         % Function composition of the objective and its gradient and Hessian.
         f{k} = @(x) rho/2 * norm(A*x - b + u{k})^2 + ...
-                    -1/t * sum(ln(real(exp(-i*phi).*(C'*x)) - alpha, a0) + ...
+                    -1/t * sum(ln(real(exp(-i*phi{k}).*(C'*x)) - alpha, a0) + ...
                                 ln(beta.^2 - abs(C'*x).^2));
         grad{k} = @(x) rho * A' * (A*x - b + u{k}) + 1/t * C * r{k}(x); 
         multHess{k} = @(x, v) rho * A' * (A * v) + ...
@@ -178,12 +180,17 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     end
 
     % This is the faster way.
+    for k = 1 : N
+        phi{k} = angle(fobj(k).C' * x{k});
+    end
 
     % Compute the r coefficients, which are used in the gradient calculation.
     function [r] = compute_r(x, k)
         a0 = (fobj(k).alpha ~= 0); % Used to cancel lower barrier if alpha is 0.
-        phi = angle(fobj(k).C' * x);
-        r = a0 .* -exp(1i*phi)./ (real(exp(-1i*phi).*(fobj(k).C'*x)) - ...
+        if dynamic_phi
+            phi{k} = angle(fobj(k).C' * x);
+        end
+        r = a0 .* -exp(1i*phi{k})./ (real(exp(-1i*phi{k}).*(fobj(k).C'*x)) - ...
                         fobj(k).alpha) + ...
                     2 * (fobj(k).C'*x)./(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2);
     end
@@ -191,8 +198,10 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     % Compute the s coefficients, which are used in the Hessian calculation.
     function [s] = compute_s(x, k)
         a0 = (fobj(k).alpha ~= 0); 
-        phi = angle(fobj(k).C' * x);
-        s = a0.*1./(real(exp(-1i*phi).*(fobj(k).C'*x)) - fobj(k).alpha).^2 + ...
+        if dynamic_phi
+            phi{k} = angle(fobj(k).C' * x);
+        end
+        s = a0.*1./(real(exp(-1i*phi{k}).*(fobj(k).C'*x)) - fobj(k).alpha).^2 + ...
             2./(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2) + ...
             4*abs(fobj(k).C'*x).^2./(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2).^2;
     end
@@ -200,15 +209,17 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     % Compute the function value.
     function [f] = compute_f(x, k)
         a0 = (fobj(k).alpha ~= 0);
-        phi = angle(fobj(k).C' * x);
-        f = rho/2 * norm(pres(k).A(z)*x - pres(k).b(z) + u{k})^2 + ...
-                    -1/t * sum(ln(real(exp(-1i*phi).*(fobj(k).C'*x)) - ...
-                                    fobj(k).alpha, a0) + ...
-                                ln(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2));
-        f = rho/2 * norm(pres(k).A(z)*x - pres(k).b(z) + u{k})^2 + ...
+        if dynamic_phi
+            f = rho/2 * norm(pres(k).A(z)*x - pres(k).b(z) + u{k})^2 + ...
                     -1/t * sum(ln(abs((fobj(k).C'*x)) - ...
                                     fobj(k).alpha, a0) + ...
                                 ln(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2));
+        else
+            f = rho/2 * norm(pres(k).A(z)*x - pres(k).b(z) + u{k})^2 + ...
+                    -1/t * sum(ln(real(exp(-1i*phi{k}).*(fobj(k).C'*x)) - ...
+                                    fobj(k).alpha, a0) + ...
+                                ln(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2));
+        end
     end
 
     % Precomputation to speed up the gradient calculation.
@@ -220,10 +231,6 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
     % Compute the gradient.
     function [grad] = compute_grad(x, k)
         a0 = (fobj(k).alpha ~= 0);
-        phi = angle(fobj(k).C' * x);
-        r = a0 .* -exp(1i*phi)./ ...
-                    (real(exp(-1i*phi).*(fobj(k).C'*x)) - fobj(k).alpha) + ...
-                    2*(fobj(k).C'*x)./(fobj(k).beta.^2 - abs(fobj(k).C'*x).^2);
         grad = grad_precompute_matrix{k} * x + grad_precompute_vector{k} + ...
                     1/t * fobj(k).C * compute_r(x, k);
     end
