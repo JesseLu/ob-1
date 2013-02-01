@@ -325,8 +325,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
             if lambda^2/2 <= newton_err_thresh
                 ind = find(t(k) == t_vals);
                 if ind == length(t_vals)
-                    fprintf('%f (%d)', 180/pi*angle(fobj(k).C(:,1)' * x{k}), j);
-
+                    % fprintf('%f (%d)', 180/pi*angle(fobj(k).C(:,1)' * x{k}), j);
                     mode_done(k) = true;
                 else
                     t(k) = t_vals(ind+1);
