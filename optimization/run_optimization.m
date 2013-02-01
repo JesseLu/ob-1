@@ -3,7 +3,8 @@
 
 %% Description
 
-function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
+function [z, p, state, progress] = ...
+                run_optimization(opt_prob, g, p0, options, varargin)
 
     %% Set up logging.
     options = check_file_names(options);
@@ -73,6 +74,9 @@ function [z, p, state] = run_optimization(opt_prob, g, p0, options, varargin)
         else
             error('Invalid paradigm.');
         end
+
+        % Early progress visualization.
+        progress = options.vis_progress(k, state.x, z, p, progress);
 
         % Update the structure variable.
         if ~termination_flag % Only if not terminated.

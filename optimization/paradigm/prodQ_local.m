@@ -28,7 +28,7 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
         state.kappa_shrink_rate = 0.5; % Percent decrease for a failed step.
 
         % Default values for the relaxed field objective.
-        state.a = @(fvals) max(cell2mat(fvals));
+        state.a = @(fvals) max(fvals(:));
         state.p = 2;
 
         % Default visualization function.
@@ -219,7 +219,8 @@ function [P, q, state] = prodQ_local(z, opt_prob, state, varargin)
     %   = \frac{1}{2}\|z - (z_0 - \kappa \nabla_z F)\|^2 + \mbox{const.} $$
 
     if F ~= 0 
-        grad_F_scaled = 1/a(f) * grad_F;
+        fprintf(' %e', a(cell2mat(f)));
+        grad_F_scaled = 1/a(cell2mat(f)) * grad_F;
         P = speye(length(grad_F_scaled));
         q = z - kappa * grad_F_scaled;
     else
