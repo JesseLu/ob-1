@@ -65,7 +65,7 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
     % Visualize certain fields.
     for i = mode_sel
         subplot(2, N+1, i+1); 
-        my_vis_slice(modes(mode_sel(i)).E, vis_layer, @abs);
+        my_vis_slice(modes(i).E, vis_layer(i), @abs);
         title(['Mode ', num2str(i)]);
     end
 
