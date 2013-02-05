@@ -58,13 +58,14 @@ function [progress_out, x] = track_progress(opt_prob, struct_obj, vis_layer, ...
 
     % Visualize epsilon.
     % subplot 111; imagesc(modes(mode_sel(1)).epsilon{G}'); axis equal tight;
-    subplot(2, N+1, 1); 
+    num_vis_modes = length(mode_sel);
+    subplot(2, num_vis_modes+1, 1); 
     title('epsilon');
     my_vis_slice(modes(mode_sel(1)).epsilon, vis_layer{1}, @real);
 
     % Visualize certain fields.
     for i = mode_sel
-        subplot(2, N+1, i+1); 
+        subplot(2, num_vis_modes+1, i+1); 
         my_vis_slice(modes(i).E, vis_layer{i}, @abs);
         title(['Mode ', num2str(i)]);
     end
