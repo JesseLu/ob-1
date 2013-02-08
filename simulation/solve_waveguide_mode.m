@@ -44,8 +44,8 @@ function [beta, E, H, J] = solve_waveguide_mode(omega, s_prim, s_dual, ...
     %% Parse inputs
 
     % Shorthand for the bounded plane.
-    p0 = pos{1};
-    p1 = pos{2};
+    p0 = round(pos{1});
+    p1 = round(pos{2});
     shape = p1 - p0 + 1;
 
     % Cut out the bounded plane.
