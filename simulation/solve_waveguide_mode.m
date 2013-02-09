@@ -141,6 +141,18 @@ function [beta, E, H, J] = solve_waveguide_mode(omega, s_prim, s_dual, ...
     % Fields.
     [E_small, H_small, J_small, E_err, H_err] = get_wg_fields(beta, v);
 
+    % Make the components of the E and H fields match the propagation
+    % direction.
+    if dir(2) == '+'
+        coeff = -1;
+    elseif dir(2) == '-'
+        coeff = +1;
+    else
+        error('Directionality must be either + or -.');
+    end
+    E_small{prop_dir} = coeff * E_small{prop_dir};
+    H_small{prop_dir} = coeff * H_small{prop_dir};
+
     % Expand the fields to span the entire simulation space.
     orig_dims = size(epsilon{1});
     for k = 1 : 3
@@ -186,13 +198,14 @@ function [beta, E, H, J] = solve_waveguide_mode(omega, s_prim, s_dual, ...
     end
 
 %     %% Plot fields
-%     f = {E{:}, H{:}};
+%     f = {E_small{:}, H_small{:}};
 %     title_text = {'Ex', 'Ey', 'Ez', 'Hx', 'Hy', 'Hz'};
 %     for k = 1 : 6
 %         subplot(2, 3, k);
 %         my_plot(reshape(real(f{k}), shape));
 %         title(title_text{k});
 %     end
+%     pause
 % %     % Can be used for lower dimension cases.
 % %     subplot 121; plot(real([f{1}, f{2}, f{3}, f{4}, f{5}, f{6}]), '.-');
 % %     subplot 122; plot(imag([f{1}, f{2}, f{3}, f{4}, f{5}, f{6}]), '.-');
