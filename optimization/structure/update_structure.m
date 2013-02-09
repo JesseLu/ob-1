@@ -101,17 +101,26 @@ function [z, p] = update_structure(P, q, g, p0, varargin)
             % Parameterize
             [A, b] = my_parameterize(P, q, g, p0);
 
-            % Solve for p.
-            cvx_quiet(true)
-            cvx_begin
-                variable dp(length(p0))
-                minimize norm(A*dp - b)
-                subject to
-                    p0 + dp <= g.p_range(:,2)
-                    p0 + dp >= g.p_range(:,1)
-            cvx_end
+            A2 = real(A' * A);
+            if all(all(diag(diag(A2)) == A2)) % If A diagonal, trivial to solve.
+                p = p0 + (real(A' * b) ./ diag(A2));
+                p = ((p >= g.p_range(:,1)) & (p <= g.p_range(:,2))) .* p ...
+                    + (p < g.p_range(:,1)) .* g.p_range(:,1) ...
+                    + (p > g.p_range(:,2)) .* g.p_range(:,2);
 
-            p = p0 + dp;
+            else % For non-diagonal A use cvx.
+                % Solve for p.
+                cvx_quiet(true)
+                cvx_begin
+                    variable dp(length(p0))
+                    minimize norm(A*dp - b)
+                    subject to
+                        p0 + dp <= g.p_range(:,2)
+                        p0 + dp >= g.p_range(:,1)
+                cvx_end
+                p = p0 + dp;
+            end
+
             z = g.m(p);
 
 %             % Test
