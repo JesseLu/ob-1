@@ -91,7 +91,7 @@ function [opt_prob, J, E_out] = translate_mode(mode, solver)
                                        out.pos, out.dir, out.mode_num);
         
         % Linear algebra-ize.
-        C(:,j) = vec(E_out{j}); % Vectorize
+        C(:,j) = sparse(vec(E_out{j})); % Vectorize
         alpha(j,1) = sqrt(out.power(1)) * norm(C(:,j))^2; % Scale.
         beta(j,1) = sqrt(out.power(2)) * norm(C(:,j))^2;
     end

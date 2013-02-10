@@ -109,6 +109,7 @@ function [z, p] = update_structure(P, q, g, p0, varargin)
                     + (p > g.p_range(:,2)) .* g.p_range(:,2);
 
             else % For non-diagonal A use cvx.
+                fprintf('[cvx] ');
                 % Solve for p.
                 cvx_quiet(true)
                 cvx_begin
