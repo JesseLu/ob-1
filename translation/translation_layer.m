@@ -86,18 +86,18 @@ function [opt_prob, J, E_out] = translate_mode(mode, solver)
         out = outs(j);
 
         % Find the field pattern of the desired output mode.
-        [beta, E_out{j}] = solve_waveguide_mode(omega, s_prim, s_dual, ...
+        [~, E_out{j}] = solve_waveguide_mode(omega, s_prim, s_dual, ...
                                        mu, epsilon, ...
                                        out.pos, out.dir, out.mode_num);
         
         % Linear algebra-ize.
         C(:,j) = sparse(vec(E_out{j})); % Vectorize
-        alpha(j,1) = sqrt(out.power(1)) * norm(C(:,j))^2; % Scale.
-        beta(j,1) = sqrt(out.power(2)) * norm(C(:,j))^2;
+        alpha(j,1) = sqrt(min(out.power)) * norm(C(:,j))^2; % Scale.
+        beta(j,1) = sqrt(max(out.power)) * norm(C(:,j))^2;
     end
 
-    field_obj = struct( 'alpha', real(alpha), ...
-                        'beta', real(beta), ... 
+    field_obj = struct( 'alpha', (alpha), ...
+                        'beta', (beta), ... 
                         'C', C);
 
     %% 

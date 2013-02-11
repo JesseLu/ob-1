@@ -25,14 +25,27 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
 
         % Default value for x and u.
         for k = 1 : N
-            mag = mean([fobj(k).alpha, fobj(k).beta], 2);
+
+            alpha = fobj(k).alpha;
+            beta = fobj(k).beta;
             C = fobj(k).C;
             x_default{k} = zeros(size(C,1), 1);
-            u_default{k} = zeros(size(C,1), 1);
-            for j = 1 : size(C, 2)
-                x_default{k} = x_default{k} + ...
-                                    mag(j) * C(:,j) ./ norm(C(:,j))^2;
+
+            % Simple iteration to find feasible starting x.
+            for cnt = repmat([1 : size(C, 2)], 1, 20)
+                val = abs(C'*x_default{k});
+                if all((val > alpha) & (val < beta))
+                    break % Initial x should be feasible now.
+                end
+                corr = mean([alpha, beta], 2) - val;
+                x_default{k} = x_default{k} + C(:,cnt) * corr(cnt);
             end
+            u_default{k} = zeros(size(C,1), 1);
+%             mag = mean([fobj(k).alpha, fobj(k).beta], 2);
+%             for j = 1 : size(C, 2)
+%                 x_default{k} = x_default{k} + ...
+%                                     mag(j) * C(:,j) ./ norm(C(:,j))^2;
+%             end
         end
 
         state = struct( 't_vals', 10.^[1:3], ...
