@@ -153,12 +153,12 @@ function [S, epsilon] = planar_selection_matrix(type, epsilon, ...
                 % Isolate z-component values in their respective "columns".
                 % This will produce an assymetric epsilon profile.
 
-                if i ~= sel{2}(1)
+                if i ~= sel{2}(1) | i == sel{1}(1)
                     ind = [ind, pos2ind(i, j, z_ind{1}, 1)];
                     s = [s, w{1}(z_ind{1})];
                 end
 
-                if j ~= sel{2}(2)
+                if j ~= sel{2}(2) | j == sel{1}(2)
                     ind = [ind, pos2ind(i, j, z_ind{2}, 2)];
                     s = [s, w{2}(z_ind{2})];
                 end
