@@ -34,7 +34,7 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
             % Simple iteration to find feasible starting x.
             for cnt = repmat([1 : size(C, 2)], 1, 20)
                 val = abs(C'*x_default{k})
-                if all((val > alpha) & (val < beta))
+                if all((val > alpha) & (val < beta));
                     break % Initial x should be feasible now.
                 end
                 corr = mean([alpha, beta], 2) - val;
