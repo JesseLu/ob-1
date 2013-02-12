@@ -33,12 +33,13 @@ function [P, q, state] = prodQ_global(z, opt_prob, state, varargin)
 
             % Simple iteration to find feasible starting x.
             for cnt = repmat([1 : size(C, 2)], 1, 20)
-                val = abs(C'*x_default{k});
+                val = abs(C'*x_default{k})
                 if all((val > alpha) & (val < beta))
                     break % Initial x should be feasible now.
                 end
                 corr = mean([alpha, beta], 2) - val;
-                x_default{k} = x_default{k} + C(:,cnt) * corr(cnt);
+                x_default{k} = x_default{k} + ...
+                                C(:,cnt) * (corr(cnt) / norm(C(:,cnt))^2);
             end
             u_default{k} = zeros(size(C,1), 1);
 %             mag = mean([fobj(k).alpha, fobj(k).beta], 2);
