@@ -84,24 +84,34 @@ function [S, epsilon] = planar_selection_matrix(type, epsilon, ...
             if strcmp(type, 'average')
                 % The averaging scheme determines the x- and y-components of 
                 % epsilon by averaging the adjacent z-component values.
-                if i ~= sel{1}(1)
-                    ind = [ind, pos2ind(i-1, j, z_ind{1}, 1)];
-                    s = [s, 0.5*w{1}(z_ind{1})];
-                end
 
-                if i ~= sel{2}(1)
-                    ind = [ind, pos2ind(i, j, z_ind{1}, 1)];
-                    s = [s, 0.5*w{1}(z_ind{1})];
-                end
+                if sel{2}(2) == sel{1}(2) % Special case for fib/fsd 2D.
+                        ind = [ind, pos2ind(i, j, z_ind{1}, 1)];
+                        s = [s, w{1}(z_ind{1})];
 
-                if j ~= sel{1}(2)
-                    ind = [ind, pos2ind(i, j-1, z_ind{2}, 2)];
-                    s = [s, 0.5*w{2}(z_ind{2})];
-                end
+                        ind = [ind, pos2ind(i, j, z_ind{2}, 2)];
+                        s = [s, w{2}(z_ind{2})];
 
-                if j ~= sel{2}(2)
-                    ind = [ind, pos2ind(i, j, z_ind{2}, 2)];
-                    s = [s, 0.5*w{2}(z_ind{2})];
+                else
+                    if i ~= sel{1}(1)
+                        ind = [ind, pos2ind(i-1, j, z_ind{1}, 1)];
+                        s = [s, 0.5*w{1}(z_ind{1})];
+                    end
+
+                    if i ~= sel{2}(1)
+                        ind = [ind, pos2ind(i, j, z_ind{1}, 1)];
+                        s = [s, 0.5*w{1}(z_ind{1})];
+                    end
+
+                    if j ~= sel{1}(2) 
+                        ind = [ind, pos2ind(i, j-1, z_ind{2}, 2)];
+                        s = [s, 0.5*w{2}(z_ind{2})];
+                    end
+
+                    if j ~= sel{2}(2)
+                        ind = [ind, pos2ind(i, j, z_ind{2}, 2)];
+                        s = [s, 0.5*w{2}(z_ind{2})];
+                    end
                 end
 
             elseif strcmp(type, 'average-noclipping')
