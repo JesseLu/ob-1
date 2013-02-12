@@ -3,7 +3,7 @@
 
 function [callback] = solve_maxwell(omega, s_prim, s_dual, mu, epsilon, J)
 
-    num_iters = 1e4; % Change to 1e5 later.
+    num_iters = 1e5;
     err_thresh = 1e-6;
     dims = size(epsilon{1});
     E0 = {zeros(dims), zeros(dims), zeros(dims)};
