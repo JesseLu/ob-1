@@ -89,7 +89,14 @@ function [opt_prob, J, E_out] = translate_mode(mode, solver)
         [~, E_out{j}] = solve_waveguide_mode(omega, s_prim, s_dual, ...
                                        mu, epsilon, ...
                                        out.pos, out.dir, out.mode_num);
-        
+
+%         % Use for debugging.
+%         for l = 1 : 3
+%             subplot (1, 3, l)
+%             imagesc(real(squeeze(E_out{j}{l}(:,40,:)))'); axis equal tight;
+%         end
+%         pause
+            
         % Linear algebra-ize.
         C(:,j) = sparse(vec(E_out{j})); % Vectorize
         alpha(j,1) = sqrt(min(out.power)) * norm(C(:,j))^2; % Scale.
