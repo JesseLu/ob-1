@@ -159,6 +159,32 @@ function [S, epsilon] = planar_selection_matrix(type, epsilon, ...
                     s = [s, w{2}(z_ind{2}(aiy))];
                 end
 
+            elseif strcmp(type, 'alternate-noclipping')
+                % The alternating scheme determines the value of 
+                % the x- and y-components by alternating (in z) between the
+                % value of the neighboring z-components of epsilon.
+
+                init_ind = [1 2]; % Alternate on a checkerboard pattern.
+                if mod(i+j, 2)
+                    init_ind = fliplr(init_ind);
+                end
+
+                % Construct the alternating indices.
+                aix = init_ind(1) : 2 : length(z_ind{1}); 
+                aiy = init_ind(2) : 2 : length(z_ind{2}); 
+
+                ind = [ind, pos2ind(i-1, j, z_ind{1}(aix), 1)];
+                s = [s, w{1}(z_ind{1}(aix))];
+
+                ind = [ind, pos2ind(i, j, z_ind{1}(aix), 1)];
+                s = [s, w{1}(z_ind{1}(aix))];
+
+                ind = [ind, pos2ind(i, j-1, z_ind{2}(aiy), 2)];
+                s = [s, w{2}(z_ind{2}(aiy))];
+
+                ind = [ind, pos2ind(i, j, z_ind{2}(aiy), 2)];
+                s = [s, w{2}(z_ind{2}(aiy))];
+
             elseif strcmp(type, 'isolate')
                 % Isolate z-component values in their respective "columns".
                 % This will produce an assymetric epsilon profile.
@@ -172,6 +198,16 @@ function [S, epsilon] = planar_selection_matrix(type, epsilon, ...
                     ind = [ind, pos2ind(i, j, z_ind{2}, 2)];
                     s = [s, w{2}(z_ind{2})];
                 end
+
+            elseif strcmp(type, 'isolate-noclipping')
+                % Isolate z-component values in their respective "columns".
+                % This will produce an assymetric epsilon profile.
+
+                ind = [ind, pos2ind(i, j, z_ind{1}, 1)];
+                s = [s, w{1}(z_ind{1})];
+
+                ind = [ind, pos2ind(i, j, z_ind{2}, 2)];
+                s = [s, w{2}(z_ind{2})];
 
             else
                 error('Invalid input parameter TYPE.')
