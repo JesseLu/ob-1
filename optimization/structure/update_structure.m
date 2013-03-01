@@ -103,7 +103,7 @@ function [z, p] = update_structure(P, q, g, p0, varargin)
 
             A2 = real(A' * A);
             if all(all(diag(diag(A2)) == A2)) % If A diagonal, trivial to solve.
-                p = p0 + (real(A' * b) ./ diag(A2));
+                p = p0 + (real(A' * b) ./ (diag(A2)+1e-9));
                 p = ((p >= g.p_range(:,1)) & (p <= g.p_range(:,2))) .* p ...
                     + (p < g.p_range(:,1)) .* g.p_range(:,1) ...
                     + (p > g.p_range(:,2)) .* g.p_range(:,2);

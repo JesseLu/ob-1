@@ -40,6 +40,9 @@ function [opt_prob, J, E_out] = translate_mode(mode, solver)
 
     % Useful helper functions.
     dims = size(epsilon{1});
+    if numel(dims) == 2
+        dims(3) = 1;
+    end
     n = prod(dims);
     vec = @(f) [f{1}(:); f{2}(:); f{3}(:)];
     unvec = @(v) {reshape(full(v(1:n)), dims), ...
@@ -53,9 +56,20 @@ function [opt_prob, J, E_out] = translate_mode(mode, solver)
     % Compose the physics residual.
 
     % Get the excitation for the input mode.
-    [beta, E, H, J] = solve_waveguide_mode(omega, s_prim, s_dual, ...
-                                            mu, epsilon, ...
-                                            in.pos, in.dir, in.mode_num);
+    if strcmp(in.type, 'wgmode')
+        [beta, E, H, J] = solve_waveguide_mode(omega, s_prim, s_dual, ...
+                                                mu, epsilon, ...
+                                                in.pos, in.dir, in.mode_num);
+    elseif strcmp(in.type, 'point')
+        J = {zeros(dims), zeros(dims), zeros(dims)};
+        center = round(dims/2);
+        comp_ind = find(in.dir == 'xyz');
+        for pos_cnt = 1 : length(in.pos)
+            pos = center + in.pos{pos_cnt};
+            J{comp_ind}(pos(1), pos(2), pos(3)) = 1;
+        end
+    end
+
     for k = 1 : 3 % Scale the input excitation.
         J{k} = sqrt(in.power) * J{k};
     end
@@ -86,9 +100,19 @@ function [opt_prob, J, E_out] = translate_mode(mode, solver)
         out = outs(j);
 
         % Find the field pattern of the desired output mode.
-        [~, E_out{j}] = solve_waveguide_mode(omega, s_prim, s_dual, ...
-                                       mu, epsilon, ...
-                                       out.pos, out.dir, out.mode_num);
+        if strcmp(in.type, 'wgmode')
+            [~, E_out{j}] = solve_waveguide_mode(omega, s_prim, s_dual, ...
+                                           mu, epsilon, ...
+                                           out.pos, out.dir, out.mode_num);
+        elseif strcmp(in.type, 'point')
+            E_out{j} = {zeros(dims), zeros(dims), zeros(dims)};
+            center = round(dims/2);
+            comp_ind = find(out.dir == 'xyz');
+            for pos_cnt = 1 : length(out.pos)
+                pos = center + out.pos{pos_cnt};
+                E_out{j}{comp_ind}(pos(1), pos(2), pos(3)) = 1;
+            end
+        end
 
 %         % Use for debugging.
 %         for l = 1 : 3

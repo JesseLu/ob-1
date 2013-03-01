@@ -35,8 +35,10 @@ function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
     % the optimal step size.
 
     step_size = 1; % Always guess 1 first, in case delta_x is the Newton step.
+    step_max =  1e9; % Don't step bigger than this.
+    upper_bound_found = false;
         
-    while step_size < 1e9 % Don't step bigger than this.
+    while step_size < step_max
         f_next = f(x + step_size * delta_x);
         grad_next = grad(x + step_size * delta_x);
         err_next = calc_err(grad_next);
@@ -46,6 +48,7 @@ function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
             f_hi = f_next;
             grad_hi = grad_next;
             err_hi = err_next;
+            upper_bound_found = true;
 
             break % We have found the step size interval.
 
@@ -63,6 +66,12 @@ function [optimal_step] = line_search_convex(f, grad, delta_x, x, err_thresh)
        end
 
         step_size = step_size * 2; % Increase interval.
+    end
+
+    if ~upper_bound_found
+        warning('Could not find upper bound in convex line search');
+        optimal_step = step_max;
+        return
     end
 
     %% Bisect to optimize step size
